@@ -36,7 +36,11 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app, bool devMode) {
     auto window_result = saucer::window::create(app);
     m_window = std::move(window_result.value());
 
-    auto webview_result = saucer::smartview::create({.window = m_window});
+    auto webview_result = saucer::smartview::create({
+        .window = m_window,
+        .hardware_acceleration = false,
+        .browser_flags = {"--js-flags=--max-old-space-size=48"},
+    });
     m_webview.emplace(std::move(webview_result.value()));
 
     m_window->set_title("ProofReader");

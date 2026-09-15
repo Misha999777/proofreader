@@ -83,6 +83,8 @@ void ProofReaderApp::handleHotkey(int hotkeyId) {
         std::wstring text = m_hotkeyManager->getSelectedTextViaUIA();
         if (!text.empty()) {
             showWindowWithText(text);
+        } else {
+            MessageBeep(MB_ICONWARNING);
         }
     }
 }
