@@ -2,6 +2,7 @@
 
 #include <dwmapi.h>
 #include <saucer/embedded/all.hpp>
+#include <saucer/modules/stable/webview2.hpp>
 
 #include "utils/Utils.hpp"
 
@@ -36,10 +37,14 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app, bool devMode) {
     auto window_result = saucer::window::create(app);
     m_window = std::move(window_result.value());
 
+    std::set<std::string> browserFlags;
+    if (!devMode) {
+        browserFlags.emplace("--js-flags=--max-old-space-size=48");
+    }
     auto webview_result = saucer::smartview::create({
         .window = m_window,
         .hardware_acceleration = false,
-        .browser_flags = {"--js-flags=--max-old-space-size=48"},
+        .browser_flags = std::move(browserFlags),
     });
     m_webview.emplace(std::move(webview_result.value()));
 
@@ -47,8 +52,7 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app, bool devMode) {
     m_window->set_size({420, 620});
     m_window->set_resizable(false);
 
-    // Find our window and apply the embedded icon via Win32
-    HWND hwnd = FindWindowW(NULL, L"ProofReader");
+    HWND hwnd = m_window->native().hwnd;
     if (hwnd) {
         HINSTANCE hInstance = GetModuleHandle(NULL);
         HICON hIcon = LoadIconW(hInstance, MAKEINTRESOURCEW(101));
@@ -82,7 +86,7 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app, bool devMode) {
 }
 
 ProofReaderWindow::~ProofReaderWindow() {
-    HWND hwnd = FindWindowW(NULL, L"ProofReader");
+    HWND hwnd = m_window ? m_window->native().hwnd : nullptr;
     if (hwnd) {
         RemoveWindowSubclass(hwnd, themeSubclassProc, 1);
     }

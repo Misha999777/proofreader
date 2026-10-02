@@ -1,0 +1,111 @@
+name: Publish MSIX to the store
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Select version bump type'
+        required: true
+        type: choice
+        default: 'patch'
+        options:
+          - patch
+          - minor
+          - major
+      release_notes:
+        description: 'Release Notes for Microsoft Store'
+        required: true
+        default: 'Minor bug fixes and improvements'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Setup Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+      - name: Configure Microsoft Store CLI
+        uses: microsoft/microsoft-store-apppublisher@v1.4
+      - name: Reconfigure store credentials
+        run: |
+          msstore reconfigure `
+            --tenantId ${{ secrets.AZURE_AD_TENANT_ID }} `
+            --clientId ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }} `
+            --clientSecret ${{ secrets.AZURE_AD_APPLICATION_SECRET }} `
+            --sellerId ${{ secrets.SELLER_ID }}
+      - name: Configure git user
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Bump version in manifest
+        run: |
+          $content = Get-Content packaging\AppxManifest.xml -Raw
+          if ($content -match '(<Identity[^>]+Version=)"([^"]+)"') {
+              $currentVersion = [version]$matches[2]
+              $versionType = "${{ inputs.version_type }}"
+              
+              if ($versionType -eq 'major') {
+                  $newVersion = "$($currentVersion.Major + 1).0.0.0"
+              } elseif ($versionType -eq 'minor') {
+                  $newVersion = "$($currentVersion.Major).$($currentVersion.Minor + 1).0.0"
+              } else {
+                  $newVersion = "$($currentVersion.Major).$($currentVersion.Minor).$($currentVersion.Build + 1).0"
+              }
+              
+              $content = $content -replace '(<Identity[^>]+Version=)"([^"]+)"', "`$1""$newVersion"""
+              Set-Content -Path packaging\AppxManifest.xml -Value $content -NoNewline
+              
+              git add packaging\AppxManifest.xml
+              git commit -m "chore(release): bump version to $newVersion"
+              git tag "v$newVersion"
+          } else {
+              Write-Error "Could not find Version in Identity tag in AppxManifest.xml"
+              exit 1
+          }
+        shell: pwsh
+
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Configure CMake
+        run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build Project
+        run: cmake --build build --config Release
+
+      - name: Create MSIX Package
+        run: .\build.ps1
+        shell: powershell
+      - name: Publish App and Commit to Store
+        env:
+          RELEASE_NOTES: ${{ github.event.inputs.release_notes }}
+          PRODUCT_ID: ${{ secrets.STORE_PRODUCT_ID }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          
+          msstore publish build/ProofReader.msix -id $env:PRODUCT_ID --noCommit
+          
+          $submission = msstore submission get $env:PRODUCT_ID | ConvertFrom-Json
+          if ($submission.Listings.'en-us') {
+              $submission.Listings.'en-us'.BaseListing.ReleaseNotes = $env:RELEASE_NOTES
+          }
+          $metadataJson = $submission | ConvertTo-Json -Depth 100 -Compress
+          msstore submission updateMetadata $env:PRODUCT_ID $metadataJson
+          
+          msstore submission publish $env:PRODUCT_ID
+        shell: pwsh
+
+      - run: git push --follow-tags
