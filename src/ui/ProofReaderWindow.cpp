@@ -2,6 +2,7 @@
 
 #include <dwmapi.h>
 #include <saucer/embedded/all.hpp>
+#include <saucer/modules/stable/webview2.hpp>
 
 #include "utils/Utils.hpp"
 
@@ -47,8 +48,7 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app, bool devMode) {
     m_window->set_size({420, 620});
     m_window->set_resizable(false);
 
-    // Find our window and apply the embedded icon via Win32
-    HWND hwnd = FindWindowW(NULL, L"ProofReader");
+    HWND hwnd = m_window->native().hwnd;
     if (hwnd) {
         HINSTANCE hInstance = GetModuleHandle(NULL);
         HICON hIcon = LoadIconW(hInstance, MAKEINTRESOURCEW(101));
@@ -82,7 +82,7 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app, bool devMode) {
 }
 
 ProofReaderWindow::~ProofReaderWindow() {
-    HWND hwnd = FindWindowW(NULL, L"ProofReader");
+    HWND hwnd = m_window ? m_window->native().hwnd : nullptr;
     if (hwnd) {
         RemoveWindowSubclass(hwnd, themeSubclassProc, 1);
     }

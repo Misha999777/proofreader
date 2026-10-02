@@ -14,7 +14,7 @@ import { Settings24Regular, Delete24Regular, Copy24Regular, Play24Regular, Send2
 import { diffWords } from 'diff';
 
 import { proofread } from '../services/api';
-import GOALS from '../goals.json';
+import GOALS from '../config/goals.json';
 
 import styles from '../styles/ProofreadingView.module.css';
 
