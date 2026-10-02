@@ -1,6 +1,9 @@
+body {
+  margin: 0;
+  overflow: hidden; 
+}
+
 .root {
-  width: 100%;
   min-height: 100vh;
   padding: 20px;
-  box-sizing: border-box;
 }
