@@ -37,10 +37,14 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app, bool devMode) {
     auto window_result = saucer::window::create(app);
     m_window = std::move(window_result.value());
 
+    std::set<std::string> browserFlags;
+    if (!devMode) {
+        browserFlags.emplace("--js-flags=--max-old-space-size=48");
+    }
     auto webview_result = saucer::smartview::create({
         .window = m_window,
         .hardware_acceleration = false,
-        .browser_flags = {"--js-flags=--max-old-space-size=48"},
+        .browser_flags = std::move(browserFlags),
     });
     m_webview.emplace(std::move(webview_result.value()));
 

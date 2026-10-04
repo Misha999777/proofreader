@@ -1,12 +1,24 @@
-name: MSIX Build
+name: Publish MSIX to the store
 
 on:
   workflow_dispatch:
     inputs:
+      version_type:
+        description: 'Select version bump type'
+        required: true
+        type: choice
+        default: 'patch'
+        options:
+          - patch
+          - minor
+          - major
       release_notes:
         description: 'Release Notes for Microsoft Store'
         required: true
         default: 'Minor bug fixes and improvements'
+
+permissions:
+  contents: write
 
 jobs:
   build-and-publish:
@@ -15,6 +27,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Setup Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
       - name: Setup Node.js
@@ -28,6 +42,37 @@ jobs:
             --clientId ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }} `
             --clientSecret ${{ secrets.AZURE_AD_APPLICATION_SECRET }} `
             --sellerId ${{ secrets.SELLER_ID }}
+      - name: Configure git user
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Bump version in manifest
+        run: |
+          $content = Get-Content packaging\AppxManifest.xml -Raw
+          if ($content -match '(<Identity[^>]+Version=)"([^"]+)"') {
+              $currentVersion = [version]$matches[2]
+              $versionType = "${{ inputs.version_type }}"
+              
+              if ($versionType -eq 'major') {
+                  $newVersion = "$($currentVersion.Major + 1).0.0.0"
+              } elseif ($versionType -eq 'minor') {
+                  $newVersion = "$($currentVersion.Major).$($currentVersion.Minor + 1).0.0"
+              } else {
+                  $newVersion = "$($currentVersion.Major).$($currentVersion.Minor).$($currentVersion.Build + 1).0"
+              }
+              
+              $content = $content -replace '(<Identity[^>]+Version=)"([^"]+)"', "`$1""$newVersion"""
+              Set-Content -Path packaging\AppxManifest.xml -Value $content -NoNewline
+              
+              git add packaging\AppxManifest.xml
+              git commit -m "chore(release): bump version to $newVersion"
+              git tag "v$newVersion"
+          } else {
+              Write-Error "Could not find Version in Identity tag in AppxManifest.xml"
+              exit 1
+          }
+        shell: pwsh
 
       - name: Install Frontend Dependencies
         working-directory: ./frontend
@@ -62,3 +107,5 @@ jobs:
           
           msstore submission publish $env:PRODUCT_ID
         shell: pwsh
+
+      - run: git push --follow-tags
