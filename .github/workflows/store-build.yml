@@ -1,0 +1,64 @@
+name: MSIX Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: 'Release Notes for Microsoft Store'
+        required: true
+        default: 'Minor bug fixes and improvements'
+
+jobs:
+  build-and-publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Setup Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+      - name: Configure Microsoft Store CLI
+        uses: microsoft/microsoft-store-apppublisher@v1.4
+      - name: Reconfigure store credentials
+        run: |
+          msstore reconfigure `
+            --tenantId ${{ secrets.AZURE_AD_TENANT_ID }} `
+            --clientId ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }} `
+            --clientSecret ${{ secrets.AZURE_AD_APPLICATION_SECRET }} `
+            --sellerId ${{ secrets.SELLER_ID }}
+
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Configure CMake
+        run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build Project
+        run: cmake --build build --config Release
+
+      - name: Create MSIX Package
+        run: .\build.ps1
+        shell: powershell
+      - name: Publish App and Commit to Store
+        env:
+          RELEASE_NOTES: ${{ github.event.inputs.release_notes }}
+          PRODUCT_ID: ${{ secrets.STORE_PRODUCT_ID }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          
+          msstore publish build/ProofReader.msix -id $env:PRODUCT_ID --noCommit
+          
+          $submission = msstore submission get $env:PRODUCT_ID | ConvertFrom-Json
+          if ($submission.Listings.'en-us') {
+              $submission.Listings.'en-us'.BaseListing.ReleaseNotes = $env:RELEASE_NOTES
+          }
+          $metadataJson = $submission | ConvertTo-Json -Depth 100 -Compress
+          msstore submission updateMetadata $env:PRODUCT_ID $metadataJson
+          
+          msstore submission publish $env:PRODUCT_ID
+        shell: pwsh
