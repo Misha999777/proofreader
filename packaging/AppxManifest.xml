@@ -18,7 +18,8 @@
     </Resources>
     <Dependencies>
       <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.2506" />
-      <PackageDependency Name="Microsoft.VCLibs.140.00.UWPDesktop" MinVersion="14.0.24217.0" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" />
+      <PackageDependency Name="Microsoft.VCLibs.140.00.UWPDesktop" MinVersion="14.0.24217.0"
+                         Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" />
     </Dependencies>
     <Capabilities>
       <rescap:Capability Name="runFullTrust" />
@@ -33,7 +34,8 @@
                 Square44x44Logo="assets\Square44x44Logo.png">
         </uap:VisualElements>
         <Extensions>
-          <desktop:Extension Category="windows.startupTask" Executable="ProofReader.exe" EntryPoint="Windows.FullTrustApplication" uap10:Parameters="--autostart">
+          <desktop:Extension Category="windows.startupTask" Executable="ProofReader.exe"
+                             EntryPoint="Windows.FullTrustApplication" uap10:Parameters="--autostart">
             <desktop:StartupTask TaskId="ProofReader" Enabled="true" DisplayName="ProofReader"/>
           </desktop:Extension>
         </Extensions>

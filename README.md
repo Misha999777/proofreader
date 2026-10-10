@@ -1,6 +1,7 @@
 # ProofReader
 
-A Windows proofreading application. Select text anywhere, press **Ctrl+Alt+P**, and get AI-powered corrections, rewrites, and summaries.
+A Windows proofreading application.
+Select text anywhere, press **Ctrl+Alt+P**, and get AI-powered corrections, rewrites, and summaries.
 
 ## Features
 

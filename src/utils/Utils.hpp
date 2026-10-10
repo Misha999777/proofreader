@@ -2,6 +2,10 @@
 
 #include <Windows.h>
 
-namespace Utils {
-    bool isWindowsDarkMode();
-}
+class Utils {
+public:
+    static void applyDarkTitleBar(HWND hwnd);
+    static void applyMenuTheme();
+private:
+    static bool isWindowsDarkMode();
+};

@@ -24,23 +24,30 @@ function renderDiff(oldText, newText) {
   const differences = diffWords(oldText, newText);
   
   return (
-    <div className={styles.diffContainer}>
-      {differences.map((part, index) => {
-        let className = '';
+    <Textarea
+      readOnly
+      resize="none"
+      className={styles.textareaRoot}
+      textarea={{
+        as: 'div',
+        style: { whiteSpace: 'pre-wrap', overflowY: 'auto' },
+        children: differences.map((part, index) => {
+          let className = '';
 
-        if (part.added) {
-          className = styles.diffAdded;
-        } else if (part.removed) {
-          className = styles.diffRemoved;
-        }
+          if (part.added) {
+            className = styles.diffAdded;
+          } else if (part.removed) {
+            className = styles.diffRemoved;
+          }
 
-        return (
-          <span key={index} className={className || undefined}>
-            {part.value}
-          </span>
-        );
-      })}
-    </div>
+          return (
+            <span key={index} className={className || undefined}>
+              {part.value}
+            </span>
+          );
+        })
+      }}
+    />
   );
 }
 

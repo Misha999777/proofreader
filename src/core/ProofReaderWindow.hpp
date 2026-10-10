@@ -15,9 +15,9 @@ public:
     void sendText(const std::wstring& text);
 
 private:
-    static std::string utf16_to_utf8(const std::wstring& wstr);
     static LRESULT CALLBACK themeSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR);
-
+    static std::string utf16_to_utf8(const std::wstring& wstr);
+    
     void setLogicalSize(saucer::size size);
 
     std::shared_ptr<saucer::window> m_window;
