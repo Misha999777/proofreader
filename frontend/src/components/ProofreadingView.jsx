@@ -44,7 +44,7 @@ function renderDiff(oldText, newText) {
   );
 }
 
-function ProofreadingView({ onShowSettings }) {
+function ProofreadingView({ onShowSettings, isVisible }) {
   const [originalText, setOriginalText] = useState('');
   const [proofreadText, setProofreadText] = useState('');
   const [selectedGoalId, setSelectedGoalId] = useState(GOALS[0].id);
@@ -71,10 +71,10 @@ function ProofreadingView({ onShowSettings }) {
   }, []);
 
   useEffect(() => {
-    if (window.saucer) {
+    if (isVisible && window.saucer) {
       saucer.call("resize", [400, hasCurrentResult ? 635 : 585]);
     }
-  }, [hasCurrentResult]);
+  }, [hasCurrentResult, isVisible]);
 
   useEffect(() => {
     if (pendingAutoRun.current && originalText) {
@@ -134,7 +134,7 @@ function ProofreadingView({ onShowSettings }) {
   };
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} style={{ display: isVisible ? 'flex' : 'none' }}>
       <div className={styles.headerRow}>
         <Label weight="semibold">Goal</Label>
         <Button appearance="subtle" icon={<Settings24Regular />} onClick={onShowSettings} title="Settings" />

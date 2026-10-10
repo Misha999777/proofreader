@@ -15,13 +15,14 @@ static void applyDarkTitleBar(HWND hwnd) {
     DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &useDark, sizeof(useDark));
 }
 
-static LRESULT CALLBACK themeSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
+LRESULT CALLBACK ProofReaderWindow::themeSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
     if (msg == WM_SETTINGCHANGE && lParam != 0) {
         const wchar_t* setting = reinterpret_cast<const wchar_t*>(lParam);
         if (wcscmp(setting, L"ImmersiveColorSet") == 0) {
             applyDarkTitleBar(hwnd);
         }
     }
+
     return DefSubclassProc(hwnd, msg, wParam, lParam);
 }
 
@@ -49,7 +50,7 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app, bool devMode) {
     m_webview.emplace(std::move(webview_result.value()));
 
     m_window->set_title("ProofReader");
-    m_window->set_size({420, 620});
+    setLogicalSize(m_logicalSize);
     m_window->set_resizable(false);
 
     HWND hwnd = m_window->native().hwnd;
@@ -69,7 +70,7 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app, bool devMode) {
     m_webview->set_dev_tools(devMode);
 
     m_webview->expose("resize", [this](int w, int h) {
-        m_window->set_size({w, h});
+        setLogicalSize({w, h});
     });
 
     m_window->on<saucer::window::event::close>([this]() {
@@ -92,7 +93,22 @@ ProofReaderWindow::~ProofReaderWindow() {
     }
 }
 
+void ProofReaderWindow::setLogicalSize(saucer::size size) {
+    m_logicalSize = size;
+    m_window->set_size(size);
+}
+
 void ProofReaderWindow::show() {
+    HWND hwnd = m_window ? m_window->native().hwnd : nullptr;
+    if (hwnd) {
+        UINT currentDpi = GetDpiForWindow(hwnd);
+        RECT rect;
+        if (GetWindowRect(hwnd, &rect)) {
+            SendMessageW(hwnd, WM_DPICHANGED, MAKEWPARAM(currentDpi, currentDpi), (LPARAM)&rect);
+        }
+    }
+
+    m_window->set_size(m_logicalSize);
     m_window->show();
 }
 

@@ -87,7 +87,7 @@ jobs:
         run: cmake --build build --config Release
 
       - name: Create MSIX Package
-        run: .\build.ps1
+        run: .\package.ps1
         shell: powershell
       - name: Publish App and Commit to Store
         env:
