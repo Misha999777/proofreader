@@ -1,4 +1,4 @@
-#include "ui/ProofReaderWindow.hpp"
+#include "ProofReaderWindow.hpp"
 
 #include <dwmapi.h>
 #include <saucer/embedded/all.hpp>
@@ -6,20 +6,11 @@
 
 #include "utils/Utils.hpp"
 
-#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
-#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
-#endif
-
-static void applyDarkTitleBar(HWND hwnd) {
-    BOOL useDark = Utils::isWindowsDarkMode() ? TRUE : FALSE;
-    DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &useDark, sizeof(useDark));
-}
-
 LRESULT CALLBACK ProofReaderWindow::themeSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
     if (msg == WM_SETTINGCHANGE && lParam != 0) {
         const wchar_t* setting = reinterpret_cast<const wchar_t*>(lParam);
         if (wcscmp(setting, L"ImmersiveColorSet") == 0) {
-            applyDarkTitleBar(hwnd);
+            Utils::applyDarkTitleBar(hwnd);
         }
     }
 
@@ -62,7 +53,7 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app, bool devMode) {
             SendMessageW(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
         }
 
-        applyDarkTitleBar(hwnd);
+        Utils::applyDarkTitleBar(hwnd);
         SetWindowSubclass(hwnd, themeSubclassProc, 1, 0);
     }
 

@@ -1,7 +1,27 @@
 [
-  { "id": "fixGrammar", "title": "Fix Grammar & Spelling", "prompt": "Proofread the following text. Fix grammar and spelling errors. Reply with only the corrected plain-text version:" },
-  { "id": "professional", "title": "Make Professional", "prompt": "Rewrite the following text to sound more professional and formal. Reply with only the rewritten plain-text version:" },
-  { "id": "friendly", "title": "Make Friendly & Casual", "prompt": "Rewrite the following text to be more friendly, approachable, and casual. Reply with only the rewritten plain-text version:" },
-  { "id": "concise", "title": "Make Concise", "prompt": "Rewrite the following text to be more concise and to the point. Reply with only the rewritten plain-text version:" },
-  { "id": "summarize", "title": "Summarize", "prompt": "Provide a short summary of the following text:" }
+  {
+    "id": "fixGrammar",
+    "title": "Fix Grammar & Spelling",
+    "prompt": "Proofread the following text. Fix grammar and spelling errors. Reply with only the corrected plain-text version:"
+  },
+  {
+    "id": "professional",
+    "title": "Make Professional",
+    "prompt": "Rewrite the following text to sound more professional and formal. Reply with only the rewritten plain-text version:"
+  },
+  {
+    "id": "friendly",
+    "title": "Make Friendly & Casual",
+    "prompt": "Rewrite the following text to be more friendly, approachable, and casual. Reply with only the rewritten plain-text version:"
+  },
+  {
+    "id": "concise",
+    "title": "Make Concise",
+    "prompt": "Rewrite the following text to be more concise and to the point. Reply with only the rewritten plain-text version:"
+  },
+  {
+    "id": "summarize",
+    "title": "Summarize",
+    "prompt": "Provide a short summary of the following text:"
+  }
 ]
