@@ -2,6 +2,7 @@
 
 #include <string>
 #include <Windows.h>
+#include <UIAutomation.h>
 
 class HotkeyManager {
 public:
@@ -11,6 +12,8 @@ public:
     std::wstring getSelectedTextViaUIA();
 
 private:
+    std::wstring tryGetSelectedText(IUIAutomation* automation);
+
     HWND m_hwnd;
     int m_hotkeyId;
 };

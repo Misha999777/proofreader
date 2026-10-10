@@ -1,6 +1,7 @@
 #include "system/HotkeyManager.hpp"
 
-#include <UIAutomation.h>
+#include <algorithm>
+#include <cwctype>
 
 HotkeyManager::HotkeyManager(HWND hwnd, int hotkeyId) 
     : m_hwnd(hwnd), m_hotkeyId(hotkeyId) 
@@ -19,10 +20,22 @@ std::wstring HotkeyManager::getSelectedTextViaUIA() {
         return L"";
     }
 
+    constexpr int maxAttempts = 5;
+    constexpr DWORD retryDelayMs = 50;
+    std::wstring result = tryGetSelectedText(automation);
+    for (int attempt = 0; attempt < maxAttempts && result.empty(); attempt++) {
+        Sleep(retryDelayMs);
+        result = tryGetSelectedText(automation);
+    }
+
+    automation->Release();
+    return result;
+}
+
+std::wstring HotkeyManager::tryGetSelectedText(IUIAutomation* automation) {
     IUIAutomationElement* focused = nullptr;
-    hr = automation->GetFocusedElement(&focused);
+    HRESULT hr = automation->GetFocusedElement(&focused);
     if (FAILED(hr) || !focused) {
-        automation->Release();
         return L"";
     }
 
@@ -53,8 +66,10 @@ std::wstring HotkeyManager::getSelectedTextViaUIA() {
         }
         textPattern->Release();
     }
-    
     focused->Release();
-    automation->Release();
+
+    if (std::ranges::all_of(result, [](wchar_t c) { return std::iswspace(c); })) {
+        return L"";
+    }
     return result;
 }
