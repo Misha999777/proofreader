@@ -1,4 +1,6 @@
-#include "core/ProofReaderApp.hpp"
+#include "ProofReaderApp.hpp"
+
+#include "TrayIcon.hpp"
 
 ProofReaderApp::ProofReaderApp() : m_hMutex(NULL) {}
 
@@ -29,63 +31,46 @@ int ProofReaderApp::run(const std::wstring& cmdLine) {
 
     bool hiddenLaunch = cmdLine.find(L"--autostart") != std::wstring::npos;
     bool devMode = (cmdLine.find(L"--dev") != std::wstring::npos);
+    
     auto app_result = saucer::application::create({.id = "ProofReader", .quit_on_last_window_closed = false});
     if (!app_result) {
         return 1;
     }
-    auto appInstance = std::move(app_result.value());
 
-    auto start_coro = [this, hiddenLaunch, devMode](saucer::application *app) -> coco::stray {
+    return app_result.value().run([this, hiddenLaunch, devMode](saucer::application *app) -> coco::stray {
+        TrayIcon::Callbacks callbacks = {
+            .onToggleWindow = [this]() { this->toggleWindow(); },
+            .onTextSelected = [this](const std::wstring& text) { this->onTextSelected(text); },
+            .onQuit = [this]() { this->quit(); }
+        };
+        auto trayIcon = std::make_unique<TrayIcon>(std::move(callbacks));
+        m_proofReaderWindow = std::make_unique<ProofReaderWindow>(app, devMode);
         m_app = app;
 
-        m_trayIcon = std::make_unique<TrayIcon>(this);
-        m_hotkeyManager = std::make_unique<HotkeyManager>(m_trayIcon->getHwnd(), 1);
-        m_proofReaderWindow = std::make_unique<ProofReaderWindow>(app, devMode);
-
         if (!hiddenLaunch) {
-            m_proofReaderWindow->show();
+            this->toggleWindow();
         }
+
         co_await app->finish();
         m_proofReaderWindow.reset();
-        m_hotkeyManager.reset();
-        m_trayIcon.reset();
+        trayIcon.reset();
         m_app = nullptr;
-    };
-
-    return appInstance.run(start_coro);
+    });
 }
 
 void ProofReaderApp::toggleWindow() {
-    if (!m_app) return;
-    m_app->post([this]() {
-        if (m_proofReaderWindow) {
-            m_proofReaderWindow->show();
-            m_proofReaderWindow->focus();
-        }
-    });
+    if (m_proofReaderWindow) {
+        m_proofReaderWindow->show();
+        m_proofReaderWindow->focus();
+    }
 }
 
-void ProofReaderApp::showWindowWithText(const std::wstring& text) {
-    if (!m_app) return;
-    m_app->post([this, text]() {
-        if (m_proofReaderWindow) {
-            if (!text.empty()) {
-                m_proofReaderWindow->sendText(text);
-            }
-            m_proofReaderWindow->show();
-            m_proofReaderWindow->focus();
-        }
-    });
-}
-
-void ProofReaderApp::handleHotkey(int hotkeyId) {
-    if (hotkeyId == 1 && m_hotkeyManager) {
-        std::wstring text = m_hotkeyManager->getSelectedTextViaUIA();
-        if (!text.empty()) {
-            showWindowWithText(text);
-        } else {
-            MessageBeep(MB_ICONWARNING);
-        }
+void ProofReaderApp::onTextSelected(const std::wstring& text) {
+    if (!text.empty()) {
+        m_proofReaderWindow->sendText(text);
+        this->toggleWindow();
+    } else {
+        MessageBeep(MB_ICONWARNING);
     }
 }
 

@@ -44,11 +44,15 @@ function App() {
 
   return (
     <FluentProvider theme={theme} className={styles.root}>
-      {shouldShowSettings ? (
-        <SettingsView onClose={handleSettingsClosed} isConfigured={isConfigured} />
-      ) : (
-        <ProofreadingView onShowSettings={() => setShowSettings(true)} />
-      )}
+      <SettingsView 
+        onClose={handleSettingsClosed} 
+        isConfigured={isConfigured} 
+        isVisible={shouldShowSettings}
+      />
+      <ProofreadingView 
+        onShowSettings={() => setShowSettings(true)} 
+        isVisible={!shouldShowSettings}
+      />
     </FluentProvider>
   );
 }

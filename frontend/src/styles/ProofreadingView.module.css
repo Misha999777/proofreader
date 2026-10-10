@@ -56,27 +56,6 @@
   justify-content: flex-end;
 }
 
-.diffContainer {
-  height: 120px;
-  overflow-y: auto;
-  border-top: 1px solid var(--colorNeutralStroke1);
-  border-bottom: 1px solid var(--colorNeutralStrokeAccessible);
-  border-left: 1px solid var(--colorNeutralStroke1);
-  border-right: 1px solid var(--colorNeutralStroke1);
-  border-radius: var(--borderRadiusMedium);
-  padding-top: 5px;
-  padding-bottom: 5px;
-  padding-left: 12px;
-  padding-right: 12px;
-  background-color: var(--colorNeutralBackground1);
-  font-family: var(--fontFamilyBase);
-  font-size: var(--fontSizeBase300);
-  line-height: var(--lineHeightBase300);
-  white-space: pre-wrap;
-  color: var(--colorNeutralForeground1);
-  box-sizing: border-box;
-}
-
 .diffAdded {
   color: #107c10;
   background-color: #dff6dd;

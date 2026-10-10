@@ -24,27 +24,34 @@ function renderDiff(oldText, newText) {
   const differences = diffWords(oldText, newText);
   
   return (
-    <div className={styles.diffContainer}>
-      {differences.map((part, index) => {
-        let className = '';
+    <Textarea
+      readOnly
+      resize="none"
+      className={styles.textareaRoot}
+      textarea={{
+        as: 'div',
+        style: { whiteSpace: 'pre-wrap', overflowY: 'auto' },
+        children: differences.map((part, index) => {
+          let className = '';
 
-        if (part.added) {
-          className = styles.diffAdded;
-        } else if (part.removed) {
-          className = styles.diffRemoved;
-        }
+          if (part.added) {
+            className = styles.diffAdded;
+          } else if (part.removed) {
+            className = styles.diffRemoved;
+          }
 
-        return (
-          <span key={index} className={className || undefined}>
-            {part.value}
-          </span>
-        );
-      })}
-    </div>
+          return (
+            <span key={index} className={className || undefined}>
+              {part.value}
+            </span>
+          );
+        })
+      }}
+    />
   );
 }
 
-function ProofreadingView({ onShowSettings }) {
+function ProofreadingView({ onShowSettings, isVisible }) {
   const [originalText, setOriginalText] = useState('');
   const [proofreadText, setProofreadText] = useState('');
   const [selectedGoalId, setSelectedGoalId] = useState(GOALS[0].id);
@@ -71,10 +78,10 @@ function ProofreadingView({ onShowSettings }) {
   }, []);
 
   useEffect(() => {
-    if (window.saucer) {
+    if (isVisible && window.saucer) {
       saucer.call("resize", [400, hasCurrentResult ? 635 : 585]);
     }
-  }, [hasCurrentResult]);
+  }, [hasCurrentResult, isVisible]);
 
   useEffect(() => {
     if (pendingAutoRun.current && originalText) {
@@ -134,7 +141,7 @@ function ProofreadingView({ onShowSettings }) {
   };
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} style={{ display: isVisible ? 'flex' : 'none' }}>
       <div className={styles.headerRow}>
         <Label weight="semibold">Goal</Label>
         <Button appearance="subtle" icon={<Settings24Regular />} onClick={onShowSettings} title="Settings" />

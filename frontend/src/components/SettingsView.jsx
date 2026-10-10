@@ -15,7 +15,7 @@ import { proofread } from '../services/api';
 
 import styles from '../styles/SettingsView.module.css';
 
-function SettingsView({ onClose, isConfigured }) {
+function SettingsView({ onClose, isConfigured, isVisible }) {
   const [apiUrl, setApiUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('');
@@ -25,11 +25,17 @@ function SettingsView({ onClose, isConfigured }) {
     setApiUrl(localStorage.getItem('apiUrl') || 'https://generativelanguage.googleapis.com/v1beta/openai/');
     setApiKey(localStorage.getItem('apiKey') || '');
     setModel(localStorage.getItem('model') || 'gemini-2.5-flash');
+  }, []);
 
-    if (window.saucer) {
+  useEffect(() => {
+    if (isVisible && window.saucer) {
       saucer.call("resize", [500, 470]);
     }
-  }, []);
+  }, [isVisible]);
+
+  useEffect(() => {
+    setTestStatus("unknown");
+  }, [apiUrl, apiKey, model])
 
   const handleSave = () => {
     localStorage.setItem('apiUrl', apiUrl);
@@ -46,7 +52,7 @@ function SettingsView({ onClose, isConfigured }) {
   };
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} style={{ display: isVisible ? 'flex' : 'none' }}>
       <div>
         <div className={styles.headerRow}>
           <Settings24Regular />
