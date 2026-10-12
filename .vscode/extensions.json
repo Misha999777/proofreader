@@ -3,6 +3,7 @@
         "ms-vscode.cpptools",
         "ms-vscode.cpp-devtools",
         "ms-vscode.cmake-tools",
-        "llvm-vs-code-extensions.vscode-clangd"
+        "llvm-vs-code-extensions.vscode-clangd",
+        "oxc.oxc-vscode"
     ]
 }
