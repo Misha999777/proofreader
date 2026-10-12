@@ -11,19 +11,16 @@ import styles from './styles/App.module.css';
 const lightTheme = createLightTheme(brand);
 const darkTheme = createDarkTheme(brand);
 
-function App() {
-  const [isConfigured, setIsConfigured] = useState(false);
+export default function App() {
+  const url = localStorage.getItem('apiUrl');
+  const key = localStorage.getItem('apiKey');
+  const model = localStorage.getItem('model');
+
+  const [isConfigured, setIsConfigured] = useState(!!(url && key && model));
   const [showSettings, setShowSettings] = useState(false);
   const [theme, setTheme] = useState(
     window.matchMedia('(prefers-color-scheme: dark)').matches ? darkTheme : lightTheme
   );
-
-  useEffect(() => {
-    const url = localStorage.getItem('apiUrl');
-    const key = localStorage.getItem('apiKey');
-    const model = localStorage.getItem('model');
-    setIsConfigured(!!(url && key && model));
-  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -50,11 +47,10 @@ function App() {
         isVisible={shouldShowSettings}
       />
       <ProofreadingView 
-        onShowSettings={() => setShowSettings(true)} 
+        onShowSettings={() => setShowSettings(true)}
+        onHideSettings={handleSettingsClosed}
         isVisible={!shouldShowSettings}
       />
     </FluentProvider>
   );
 }
-
-export default App;
