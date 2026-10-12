@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 import {
   Button,
@@ -10,10 +10,16 @@ import {
   Input,
   Divider
 } from '@fluentui/react-components';
-import { Settings24Regular, Delete24Regular, Copy24Regular, Play24Regular, Send24Regular } from '@fluentui/react-icons';
+import {
+  Settings24Regular,
+  Delete24Regular,
+  Copy24Regular,
+  Play24Regular,
+  Send24Regular
+} from '@fluentui/react-icons';
 import { diffWords } from 'diff';
 
-import { proofread } from '../services/api';
+import { proofread, trackRequest } from '../services/api';
 import GOALS from '../config/goals.json';
 
 import styles from '../styles/ProofreadingView.module.css';
@@ -51,31 +57,18 @@ function renderDiff(oldText, newText) {
   );
 }
 
-function ProofreadingView({ onShowSettings, isVisible }) {
+export default function ProofreadingView({ onShowSettings, onHideSettings, isVisible }) {
+  const [selectedGoalId, setSelectedGoalId] = useState(GOALS[0].id);
   const [originalText, setOriginalText] = useState('');
   const [proofreadText, setProofreadText] = useState('');
-  const [selectedGoalId, setSelectedGoalId] = useState(GOALS[0].id);
   const [showDiff, setShowDiff] = useState(true);
+  const pending = useRef(undefined);
+
   const [isLoading, setIsLoading] = useState(false);
-  const [conversationHistory, setConversationHistory] = useState([]);
+  const [isFollowingUp, setIsFollowingUp] = useState(false);
   const [hasCurrentResult, setHasCurrentResult] = useState(false);
   const [followUpText, setFollowUpText] = useState('');
-  const [isFollowingUp, setIsFollowingUp] = useState(false);
-  const pendingAutoRun = useRef(false);
-
-  useEffect(() => {
-    window.setOriginalText = (text) => {
-      setOriginalText(text);
-      setProofreadText('');
-      setHasCurrentResult(false);
-      setConversationHistory([]);
-      pendingAutoRun.current = true;
-    };
-
-    return () => {
-      delete window.setOriginalText;
-    };
-  }, []);
+  const [conversationHistory, setConversationHistory] = useState([]);
 
   useEffect(() => {
     if (isVisible && window.saucer) {
@@ -83,57 +76,73 @@ function ProofreadingView({ onShowSettings, isVisible }) {
     }
   }, [hasCurrentResult, isVisible]);
 
-  useEffect(() => {
-    if (pendingAutoRun.current && originalText) {
-      pendingAutoRun.current = false;
-      handleRun();
-    }
-  }, [originalText]);
-
-  const reset = () => {
+  const reset = useCallback(() => {
     setOriginalText('');
     setProofreadText('');
-    setConversationHistory([]);
-    setHasCurrentResult(false);
     setFollowUpText('');
-  };
 
-  const handleRun = async () => {
-    if (!originalText) return;
-    setIsLoading(true);
+    setIsLoading(false);
+    setIsFollowingUp(false);
     setHasCurrentResult(false);
+
+    pending.current?.abort();
+    setConversationHistory([]);
+  }, []);
+
+  const handleRun = useCallback(textToRun => {
+    reset();
+    setOriginalText(textToRun);
+    setIsLoading(true);
 
     const selectedGoal = GOALS.find(g => g.id === selectedGoalId);
     const messages = [
       { role: 'system', content: selectedGoal.prompt },
-      { role: 'user', content: originalText }
+      { role: 'user', content: textToRun }
     ];
 
-    setConversationHistory(messages);
+    trackRequest(pending, proofread(messages))
+      .then(text => {
+        setProofreadText(text);
+        setConversationHistory([...messages, { role: 'assistant', content: text }]);
+        setHasCurrentResult(true);
+      })
+      .catch(error => {
+        setProofreadText(error?.message || 'API Error');
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [selectedGoalId, reset]);
 
-    const { success, text } = await proofread(messages);
-    setProofreadText(text);
-    if (success) {
-      setConversationHistory([...messages, { role: 'assistant', content: text }]);
-      setHasCurrentResult(true);
-    }
-    setIsLoading(false);
-  };
+  useEffect(() => {
+    window.setOriginalText = text => {
+      onHideSettings();
+      handleRun(text);
+    };
+
+    return () => {
+      delete window.setOriginalText;
+    };
+  }, [onHideSettings, handleRun]);
 
   const handleFollowUp = async () => {
-    if (!followUpText || !hasCurrentResult) return;
     setIsFollowingUp(true);
 
     const updatedHistory = [...conversationHistory, { role: 'user', content: followUpText }];
     setConversationHistory(updatedHistory);
 
-    const { success, text } = await proofread(updatedHistory);
-    if (success) {
-      setProofreadText(text);
-      setConversationHistory([...updatedHistory, { role: 'assistant', content: text }]);
-      setFollowUpText('');
-    }
-    setIsFollowingUp(false);
+    trackRequest(pending, proofread(updatedHistory))
+      .then(text => {
+        setProofreadText(text);
+        setConversationHistory([...updatedHistory, { role: 'assistant', content: text }]);
+        setFollowUpText('');
+      })
+      .catch(error => {
+        setProofreadText(error?.message || 'API Error');
+      })
+      .finally(() => {
+        setIsFollowingUp(false);
+      });
   };
 
   const handleCopy = () => {
@@ -166,7 +175,6 @@ function ProofreadingView({ onShowSettings, isVisible }) {
             appearance="subtle"
             size="small"
             icon={<Delete24Regular />}
-            disabled={isLoading || isFollowingUp}
             onClick={reset}
           >
             Clear
@@ -184,7 +192,7 @@ function ProofreadingView({ onShowSettings, isVisible }) {
         <Button
           appearance="primary"
           icon={isLoading ? <Spinner size="tiny" /> : <Play24Regular />}
-          onClick={handleRun}
+          onClick={() => handleRun(originalText)}
           disabled={!originalText || isLoading || isFollowingUp}
         >
           Run Proofreading
@@ -249,5 +257,3 @@ function ProofreadingView({ onShowSettings, isVisible }) {
     </div>
   );
 }
-
-export default ProofreadingView;

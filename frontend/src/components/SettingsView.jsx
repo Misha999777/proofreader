@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import {
   Button,
@@ -11,21 +11,18 @@ import {
 } from '@fluentui/react-components';
 import { Settings24Regular, Save24Regular, NetworkCheck24Regular } from '@fluentui/react-icons';
 
-import { proofread } from '../services/api';
+import { proofread, trackRequest } from '../services/api';
+import { settings } from '../config/defaults.json';
 
 import styles from '../styles/SettingsView.module.css';
 
-function SettingsView({ onClose, isConfigured, isVisible }) {
-  const [apiUrl, setApiUrl] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('');
-  const [testStatus, setTestStatus] = useState('unknown');
+export default function SettingsView({ onClose, isConfigured, isVisible }) {
+  const [apiUrl, setApiUrl] = useState(localStorage.getItem('apiUrl') || settings.apiUrl);
+  const [apiKey, setApiKey] = useState(localStorage.getItem('apiKey') || '');
+  const [model, setModel] = useState(localStorage.getItem('model') || settings.model);
 
-  useEffect(() => {
-    setApiUrl(localStorage.getItem('apiUrl') || 'https://generativelanguage.googleapis.com/v1beta/openai/');
-    setApiKey(localStorage.getItem('apiKey') || '');
-    setModel(localStorage.getItem('model') || 'gemini-2.5-flash');
-  }, []);
+  const [testStatus, setTestStatus] = useState('unknown');
+  const pending = useRef();
 
   useEffect(() => {
     if (isVisible && window.saucer) {
@@ -33,22 +30,36 @@ function SettingsView({ onClose, isConfigured, isVisible }) {
     }
   }, [isVisible]);
 
-  useEffect(() => {
+  const handleClose = () => {
     setTestStatus("unknown");
-  }, [apiUrl, apiKey, model])
+    pending.current?.abort();
+    onClose();
+  }
 
   const handleSave = () => {
     localStorage.setItem('apiUrl', apiUrl);
     localStorage.setItem('apiKey', apiKey);
     localStorage.setItem('model', model);
-    onClose();
+    handleClose();
   };
 
-  const handleTestConnection = async () => {
+  const handleTestConnection = () => {
+    if (testStatus === 'progress') {
+      setTestStatus("unknown");
+      pending.current?.abort();
+      return;
+    }
+
     setTestStatus('progress');
     const messages = [{ role: 'user', content: 'Hello' }];
-    const { success } = await proofread(messages, apiUrl, apiKey, model);
-    setTestStatus(success ? 'success' : 'failure');
+
+    trackRequest(pending, proofread(messages, apiUrl, apiKey, model))
+      .then(() => {
+        setTestStatus('success');
+      })
+      .catch(() => {
+        setTestStatus('failure');
+      });
   };
 
   return (
@@ -93,9 +104,9 @@ function SettingsView({ onClose, isConfigured, isVisible }) {
           appearance="secondary"
           icon={testStatus === 'progress' ? <Spinner size="tiny" /> : <NetworkCheck24Regular />}
           onClick={handleTestConnection}
-          disabled={testStatus === 'progress' || !apiUrl || !apiKey || !model}
+          disabled={testStatus !== 'progress' && (!apiUrl || !apiKey || !model)}
         >
-          {testStatus === 'progress' ? 'Testing...' : 'Test Connection'}
+          {testStatus === 'progress' ? 'Cancel' : 'Test Connection'}
         </Button>
         {testStatus === 'success' && <Text className={styles.successText}>Connection Successful</Text>}
         {testStatus === 'failure' && <Text className={styles.failureText}>Connection Failed</Text>}
@@ -105,7 +116,7 @@ function SettingsView({ onClose, isConfigured, isVisible }) {
 
       <div className={styles.footerRow}>
         {isConfigured && (
-          <Button appearance="secondary" onClick={onClose}>Cancel</Button>
+          <Button appearance="secondary" onClick={handleClose}>Cancel</Button>
         )}
         <Button
           appearance="primary"
@@ -119,5 +130,3 @@ function SettingsView({ onClose, isConfigured, isVisible }) {
     </div>
   );
 }
-
-export default SettingsView;
