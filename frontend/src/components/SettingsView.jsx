@@ -16,7 +16,7 @@ import { settings } from '../config/defaults.json';
 
 import styles from '../styles/SettingsView.module.css';
 
-export default function SettingsView({ onClose, isConfigured, isVisible }) {
+export default function SettingsView({ onClose, isConfigured }) {
   const [apiUrl, setApiUrl] = useState(localStorage.getItem('apiUrl') || settings.apiUrl);
   const [apiKey, setApiKey] = useState(localStorage.getItem('apiKey') || '');
   const [model, setModel] = useState(localStorage.getItem('model') || settings.model);
@@ -25,22 +25,17 @@ export default function SettingsView({ onClose, isConfigured, isVisible }) {
   const pending = useRef();
 
   useEffect(() => {
-    if (isVisible && window.saucer) {
+    if (window.saucer) {
       saucer.call("resize", [500, 470]);
     }
-  }, [isVisible]);
-
-  const handleClose = () => {
-    setTestStatus("unknown");
-    pending.current?.abort();
-    onClose();
-  }
+    return () => pending.current?.abort();
+  }, []);
 
   const handleSave = () => {
     localStorage.setItem('apiUrl', apiUrl);
     localStorage.setItem('apiKey', apiKey);
     localStorage.setItem('model', model);
-    handleClose();
+    onClose();
   };
 
   const handleTestConnection = () => {
@@ -63,7 +58,7 @@ export default function SettingsView({ onClose, isConfigured, isVisible }) {
   };
 
   return (
-    <div className={styles.container} style={{ display: isVisible ? 'flex' : 'none' }}>
+    <div className={styles.container}>
       <div>
         <div className={styles.headerRow}>
           <Settings24Regular />
@@ -116,7 +111,7 @@ export default function SettingsView({ onClose, isConfigured, isVisible }) {
 
       <div className={styles.footerRow}>
         {isConfigured && (
-          <Button appearance="secondary" onClick={handleClose}>Cancel</Button>
+          <Button appearance="secondary" onClick={onClose}>Cancel</Button>
         )}
         <Button
           appearance="primary"

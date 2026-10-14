@@ -41,11 +41,12 @@ export default function App() {
 
   return (
     <FluentProvider theme={theme} className={styles.root}>
-      <SettingsView 
-        onClose={handleSettingsClosed} 
-        isConfigured={isConfigured} 
-        isVisible={shouldShowSettings}
-      />
+      {shouldShowSettings && (
+        <SettingsView
+          onClose={handleSettingsClosed}
+          isConfigured={isConfigured}
+        />
+      )}
       <ProofreadingView 
         onShowSettings={() => setShowSettings(true)}
         onHideSettings={handleSettingsClosed}
