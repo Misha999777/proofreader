@@ -28,23 +28,21 @@ int ProofReaderApp::run(const std::wstring& cmdLine) {
     }
 
     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-
-    bool hiddenLaunch = cmdLine.find(L"--autostart") != std::wstring::npos;
-    bool devMode = (cmdLine.find(L"--dev") != std::wstring::npos);
     
     auto app_result = saucer::application::create({.id = "ProofReader", .quit_on_last_window_closed = false});
     if (!app_result) {
         return 1;
     }
 
-    return app_result.value().run([this, hiddenLaunch, devMode](saucer::application *app) -> coco::stray {
+    bool hiddenLaunch = cmdLine.find(L"--autostart") != std::wstring::npos;
+    return app_result.value().run([this, hiddenLaunch](saucer::application *app) -> coco::stray {
         TrayIcon::Callbacks callbacks = {
             .onToggleWindow = [this]() { this->toggleWindow(); },
             .onTextSelected = [this](const std::wstring& text) { this->onTextSelected(text); },
             .onQuit = [this]() { this->quit(); }
         };
         auto trayIcon = std::make_unique<TrayIcon>(std::move(callbacks));
-        m_proofReaderWindow = std::make_unique<ProofReaderWindow>(app, devMode);
+        m_proofReaderWindow = std::make_unique<ProofReaderWindow>(app);
         m_app = app;
 
         if (!hiddenLaunch) {

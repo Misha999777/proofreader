@@ -21,7 +21,88 @@ permissions:
   contents: write
 
 jobs:
-  build-and-publish:
+  version:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Compute new version
+        id: bump
+        run: |
+          $content = Get-Content packaging\AppxManifest.xml -Raw
+          $content -match '(<Identity[^>]+Version=)"([^"]+)"' | Out-Null
+          $currentVersion = [version]$matches[2]
+
+          $versionType = "${{ inputs.version_type }}"
+          if ($versionType -eq 'major') {
+              $newVersion = "$($currentVersion.Major + 1).0.0.0"
+          } elseif ($versionType -eq 'minor') {
+              $newVersion = "$($currentVersion.Major).$($currentVersion.Minor + 1).0.0"
+          } else {
+              $newVersion = "$($currentVersion.Major).$($currentVersion.Minor).$($currentVersion.Build + 1).0"
+          }
+
+          "version=$newVersion" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+  build:
+    needs: version
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            msvc_arch: amd64
+          - arch: arm64
+            msvc_arch: amd64_arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Setup Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.msvc_arch }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+
+      - name: Set version and architecture in manifest
+        run: |
+          $content = Get-Content packaging\AppxManifest.xml -Raw
+          $content = $content -replace '(<Identity[^>]+Version=)"([^"]+)"', "`$1""${{ needs.version.outputs.version }}"""
+          $content = $content -replace '(<Identity[^>]+ProcessorArchitecture=)"([^"]+)"', "`$1""${{ matrix.arch }}"""
+          Set-Content -Path packaging\AppxManifest.xml -Value $content -NoNewline
+        shell: pwsh
+
+      - name: Configure CMake
+        run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release -Dsaucer_webview2_arch=${{ matrix.arch }}
+      - name: Build Project
+        run: cmake --build build --config Release
+
+      - name: Create MSIX Package
+        run: |
+          $dir = "packaging"
+          Copy-Item "build\ProofReader.exe" $dir
+
+          & makepri createconfig /cf $dir\pri.xml /dq en-US
+          & makepri new /pr $dir /cf $dir\pri.xml /of $dir\resources.pri
+          Remove-Item $dir\pri.xml
+
+          & makeappx pack /d $dir /p build\ProofReader_${{ matrix.arch }}.msix /o
+          Remove-Item $dir\resources.pri
+          Remove-Item $dir\ProofReader.exe
+        shell: pwsh
+      - name: Upload MSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: msix-${{ matrix.arch }}
+          path: build/ProofReader_${{ matrix.arch }}.msix
+
+  publish:
+    needs: [version, build]
     runs-on: windows-latest
 
     steps:
@@ -31,8 +112,19 @@ jobs:
           fetch-depth: 0
       - name: Setup Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - name: Download MSIX packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: msix-*
+          path: msix
+          merge-multiple: true
+
+      - name: Create MSIX Bundle
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          & makeappx bundle /d msix /p build\ProofReader.msixbundle /bv ${{ needs.version.outputs.version }} /o
+        shell: pwsh
+
       - name: Configure Microsoft Store CLI
         uses: microsoft/microsoft-store-apppublisher@v1.4
       - name: Reconfigure store credentials
@@ -42,70 +134,35 @@ jobs:
             --clientId ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }} `
             --clientSecret ${{ secrets.AZURE_AD_APPLICATION_SECRET }} `
             --sellerId ${{ secrets.SELLER_ID }}
-      - name: Configure git user
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: Bump version in manifest
-        run: |
-          $content = Get-Content packaging\AppxManifest.xml -Raw
-          if ($content -match '(<Identity[^>]+Version=)"([^"]+)"') {
-              $currentVersion = [version]$matches[2]
-              $versionType = "${{ inputs.version_type }}"
-              
-              if ($versionType -eq 'major') {
-                  $newVersion = "$($currentVersion.Major + 1).0.0.0"
-              } elseif ($versionType -eq 'minor') {
-                  $newVersion = "$($currentVersion.Major).$($currentVersion.Minor + 1).0.0"
-              } else {
-                  $newVersion = "$($currentVersion.Major).$($currentVersion.Minor).$($currentVersion.Build + 1).0"
-              }
-              
-              $content = $content -replace '(<Identity[^>]+Version=)"([^"]+)"', "`$1""$newVersion"""
-              Set-Content -Path packaging\AppxManifest.xml -Value $content -NoNewline
-              
-              git add packaging\AppxManifest.xml
-              git commit -m "chore(release): bump version to $newVersion"
-              git tag "v$newVersion"
-          } else {
-              Write-Error "Could not find Version in Identity tag in AppxManifest.xml"
-              exit 1
-          }
-        shell: pwsh
-
-      - name: Install Frontend Dependencies
-        working-directory: ./frontend
-        run: npm ci
-      - name: Build Frontend
-        working-directory: ./frontend
-        run: npm run build
-
-      - name: Configure CMake
-        run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release
-      - name: Build Project
-        run: cmake --build build --config Release
-
-      - name: Create MSIX Package
-        run: .\package.ps1
-        shell: powershell
       - name: Publish App and Commit to Store
         env:
           RELEASE_NOTES: ${{ github.event.inputs.release_notes }}
           PRODUCT_ID: ${{ secrets.STORE_PRODUCT_ID }}
         run: |
-          $ErrorActionPreference = "Stop"
-          
-          msstore publish build/ProofReader.msix -id $env:PRODUCT_ID --noCommit
-          
+          msstore publish build/ProofReader.msixbundle -id $env:PRODUCT_ID --noCommit
+
           $submission = msstore submission get $env:PRODUCT_ID | ConvertFrom-Json
           if ($submission.Listings.'en-us') {
               $submission.Listings.'en-us'.BaseListing.ReleaseNotes = $env:RELEASE_NOTES
           }
           $metadataJson = $submission | ConvertTo-Json -Depth 100 -Compress
           msstore submission updateMetadata $env:PRODUCT_ID $metadataJson
-          
+
           msstore submission publish $env:PRODUCT_ID
         shell: pwsh
 
-      - run: git push --follow-tags
+      - name: Commit version bump
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+          $newVersion = "${{ needs.version.outputs.version }}"
+          $content = Get-Content packaging\AppxManifest.xml -Raw
+          $content = $content -replace '(<Identity[^>]+Version=)"([^"]+)"', "`$1""$newVersion"""
+          Set-Content -Path packaging\AppxManifest.xml -Value $content -NoNewline
+
+          git add packaging\AppxManifest.xml
+          git commit -m "chore(release): bump version to $newVersion"
+          git tag "v$newVersion"
+          git push --follow-tags
+        shell: pwsh

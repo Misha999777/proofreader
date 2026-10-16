@@ -4,6 +4,7 @@
 #include <saucer/embedded/all.hpp>
 #include <saucer/modules/stable/webview2.hpp>
 
+#include "utils/Settings.hpp"
 #include "utils/Utils.hpp"
 
 LRESULT CALLBACK ProofReaderWindow::themeSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
@@ -25,20 +26,21 @@ std::string ProofReaderWindow::utf16_to_utf8(const std::wstring& wstr) {
     return result;
 }
 
-ProofReaderWindow::ProofReaderWindow(saucer::application* app, bool devMode) {
+ProofReaderWindow::ProofReaderWindow(saucer::application* app) {
     auto window_result = saucer::window::create(app);
     m_window = std::move(window_result.value());
 
     std::set<std::string> browserFlags;
-    if (!devMode) {
-        browserFlags.emplace("--js-flags=--max-old-space-size=48");
-    }
+#ifdef NDEBUG
+    browserFlags.emplace("--js-flags=--max-old-space-size=48");
+#endif
     auto webview_result = saucer::smartview::create({
         .window = m_window,
         .hardware_acceleration = false,
         .browser_flags = std::move(browserFlags),
     });
     m_webview.emplace(std::move(webview_result.value()));
+    m_webview->set_context_menu(false);
 
     m_window->set_title("ProofReader");
     setLogicalSize(m_logicalSize);
@@ -55,13 +57,41 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app, bool devMode) {
 
         Utils::applyDarkTitleBar(hwnd);
         SetWindowSubclass(hwnd, themeSubclassProc, 1, 0);
-    }
 
-    m_webview->set_context_menu(false);
-    m_webview->set_dev_tools(devMode);
+        if (Utils::applyMicaBackdrop(hwnd)) {
+            m_window->set_background({0, 0, 0, 0});
+            m_webview->set_background({0, 0, 0, 0});
+        }
+    }
 
     m_webview->expose("resize", [this](int w, int h) {
         setLogicalSize({w, h});
+    });
+
+    m_webview->expose("hide", [this]() {
+        m_window->hide();
+    });
+
+    m_webview->expose("getSettings", []() {
+        return SettingsStore::load();
+    });
+
+    m_webview->expose("setSettings", [](Settings settings) {
+        return SettingsStore::save(settings);
+    });
+
+    m_webview->expose("post", [this](std::string url, std::string apiKey, std::string body, saucer::executor<std::string> executor) {
+        m_http.post(url, apiKey, body, [executor = std::move(executor)](auto result) {
+            if (result) {
+                executor.resolve(*result);
+            } else {
+                executor.reject(result.error());
+            }
+        });
+    });
+
+    m_webview->expose("cancel", [this]() {
+        m_http.cancel();
     });
 
     m_window->on<saucer::window::event::close>([this]() {
@@ -69,12 +99,13 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app, bool devMode) {
         return saucer::policy::block;
     });
 
-    if (devMode) {
-        m_webview->set_url("http://localhost:5173");
-    } else {
-        m_webview->embed(saucer::embedded::all());
-        m_webview->serve("index.html");
-    }
+#ifdef NDEBUG
+    m_webview->embed(saucer::embedded::all());
+    m_webview->serve("index.html");
+#else
+    m_webview->set_url("http://localhost:5173");
+     m_webview->set_dev_tools(true);
+#endif
 }
 
 ProofReaderWindow::~ProofReaderWindow() {

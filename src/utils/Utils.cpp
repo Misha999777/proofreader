@@ -40,3 +40,13 @@ void Utils::applyDarkTitleBar(HWND hwnd) {
     BOOL useDark = Utils::isWindowsDarkMode() ? TRUE : FALSE;
     DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &useDark, sizeof(useDark));
 }
+
+bool Utils::applyMicaBackdrop(HWND hwnd) {
+    DWM_SYSTEMBACKDROP_TYPE backdrop = DWMSBT_MAINWINDOW;
+    if (FAILED(DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &backdrop, sizeof(backdrop)))) {
+        return false;
+    }
+    MARGINS margins = {-1, -1, -1, -1};
+    DwmExtendFrameIntoClientArea(hwnd, &margins);
+    return true;
+}

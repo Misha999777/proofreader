@@ -4,6 +4,7 @@ import { FluentProvider, createLightTheme, createDarkTheme } from '@fluentui/rea
 
 import SettingsView from './components/SettingsView';
 import ProofreadingView from './components/ProofreadingView';
+import { loadSettings } from './services/api';
 import { brand } from './config/theme.json';
 
 import styles from './styles/App.module.css';
@@ -11,16 +12,21 @@ import styles from './styles/App.module.css';
 const lightTheme = createLightTheme(brand);
 const darkTheme = createDarkTheme(brand);
 
-export default function App() {
-  const url = localStorage.getItem('apiUrl');
-  const key = localStorage.getItem('apiKey');
-  const model = localStorage.getItem('model');
+async function checkConfigured() {
+  const { apiUrl, apiKey, model } = await loadSettings();
+  return !!(apiUrl && apiKey && model);
+}
 
-  const [isConfigured, setIsConfigured] = useState(!!(url && key && model));
+export default function App() {
+  const [isConfigured, setIsConfigured] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [theme, setTheme] = useState(
     window.matchMedia('(prefers-color-scheme: dark)').matches ? darkTheme : lightTheme
   );
+
+  useEffect(() => {
+    checkConfigured().then(setIsConfigured);
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -31,13 +37,10 @@ export default function App() {
 
   const handleSettingsClosed = () => {
     setShowSettings(false);
-    const url = localStorage.getItem('apiUrl');
-    const key = localStorage.getItem('apiKey');
-    const model = localStorage.getItem('model');
-    setIsConfigured(!!(url && key && model));
+    checkConfigured().then(setIsConfigured);
   };
 
-  const shouldShowSettings = showSettings || !isConfigured;
+  const shouldShowSettings = showSettings || isConfigured === false;
 
   return (
     <FluentProvider theme={theme} className={styles.root}>
@@ -50,7 +53,7 @@ export default function App() {
       <ProofreadingView 
         onShowSettings={() => setShowSettings(true)}
         onHideSettings={handleSettingsClosed}
-        isVisible={!shouldShowSettings}
+        isVisible={isConfigured !== null && !shouldShowSettings}
       />
     </FluentProvider>
   );
