@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "CMake: build",
+            "type": "cmake",
+            "command": "build"
+        },
+        {
+            "label": "Run packaged",
+            "type": "process",
+            "command": "powershell.exe",
+            "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "install.ps1"],
+            "dependsOn": ["CMake: build"],
+            "problemMatcher": []
+        }
+    ]
+}
