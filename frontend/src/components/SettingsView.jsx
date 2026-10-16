@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 import {
   Button,
@@ -11,44 +11,50 @@ import {
 } from '@fluentui/react-components';
 import { Settings24Regular, Save24Regular, NetworkCheck24Regular } from '@fluentui/react-icons';
 
-import { proofread, trackRequest } from '../services/api';
+import { proofread, cancelRequest, loadSettings, saveSettings } from '../services/api';
 import { settings } from '../config/defaults.json';
 
 import styles from '../styles/SettingsView.module.css';
 
 export default function SettingsView({ onClose, isConfigured }) {
-  const [apiUrl, setApiUrl] = useState(localStorage.getItem('apiUrl') || settings.apiUrl);
-  const [apiKey, setApiKey] = useState(localStorage.getItem('apiKey') || '');
-  const [model, setModel] = useState(localStorage.getItem('model') || settings.model);
+  const [apiUrl, setApiUrl] = useState(settings.apiUrl);
+  const [apiKey, setApiKey] = useState('');
+  const [model, setModel] = useState(settings.model);
 
   const [testStatus, setTestStatus] = useState('unknown');
-  const pending = useRef();
 
   useEffect(() => {
     if (window.saucer) {
       saucer.call("resize", [500, 470]);
     }
-    return () => pending.current?.abort();
+    loadSettings().then(stored => {
+      setApiUrl(stored.apiUrl || settings.apiUrl);
+      setApiKey(stored.apiKey);
+      setModel(stored.model || settings.model);
+    });
   }, []);
 
-  const handleSave = () => {
-    localStorage.setItem('apiUrl', apiUrl);
-    localStorage.setItem('apiKey', apiKey);
-    localStorage.setItem('model', model);
+  const handleSave = async () => {
+    await saveSettings({ apiUrl, apiKey, model });
+    onClose();
+  };
+
+  const handleCancel = () => {
+    cancelRequest();
     onClose();
   };
 
   const handleTestConnection = () => {
     if (testStatus === 'progress') {
       setTestStatus("unknown");
-      pending.current?.abort();
+      cancelRequest();
       return;
     }
 
     setTestStatus('progress');
     const messages = [{ role: 'user', content: 'Hello' }];
 
-    trackRequest(pending, proofread(messages, apiUrl, apiKey, model))
+    proofread(messages, { apiUrl, apiKey, model })
       .then(() => {
         setTestStatus('success');
       })
@@ -111,7 +117,7 @@ export default function SettingsView({ onClose, isConfigured }) {
 
       <div className={styles.footerRow}>
         {isConfigured && (
-          <Button appearance="secondary" onClick={onClose}>Cancel</Button>
+          <Button appearance="secondary" onClick={handleCancel}>Cancel</Button>
         )}
         <Button
           appearance="primary"

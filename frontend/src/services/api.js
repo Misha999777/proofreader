@@ -1,57 +1,34 @@
-export function proofread(messages, customApiUrl, customApiKey, customModel) {
-  const apiUrl = customApiUrl || localStorage.getItem('apiUrl');
-  const apiKey = customApiKey || localStorage.getItem('apiKey');
-  const model = customModel || localStorage.getItem('model');
-
-  let urlString = apiUrl;
-  if (!urlString.endsWith('/chat/completions')) {
-    if (!urlString.endsWith('/')) {
-      urlString += '/';
-    }
-    urlString += 'chat/completions';
-  }
-
-  const controller = new AbortController();
-  const promise = (async () => {
-    const response = await fetch(urlString, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model,
-        messages
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content ?? '';
-  })();
-
-  return { controller, promise };
+export async function loadSettings() {
+  return await saucer.exposed.getSettings();
 }
 
-export function trackRequest(ref, { controller, promise }) {
-  ref.current?.abort();
-  ref.current = controller;
+export async function saveSettings(settings) {
+  if (!await saucer.exposed.setSettings(settings)) {
+    throw new Error('Failed to save settings');
+  }
+}
 
-  return new Promise((resolve, reject) => {
-    promise
-      .then(result => {
-        if (ref.current === controller) {
-          resolve(result);
-        }
-      })
-      .catch(err => {
-        if (ref.current === controller && err?.name !== 'AbortError') {
-          reject(err);
-        }
-      });
-  });
+export function cancelRequest() {
+  saucer.exposed.cancel();
+}
+
+export function hideWindow() {
+  saucer.exposed.hide();
+}
+
+export async function proofread(messages, customSettings) {
+    const { apiUrl, apiKey, model } = customSettings ?? await loadSettings();
+
+    let urlString = apiUrl;
+    if (!urlString.endsWith('/chat/completions')) {
+      if (!urlString.endsWith('/')) {
+        urlString += '/';
+      }
+      urlString += 'chat/completions';
+    }
+
+    const body = await saucer.exposed.post(urlString, apiKey, JSON.stringify({ model, messages }));
+
+    const data = JSON.parse(body);
+    return data.choices?.[0]?.message?.content ?? '';
 }

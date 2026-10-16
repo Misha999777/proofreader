@@ -6,5 +6,12 @@ export default defineConfig({
   build: {
     outDir: '../build/frontend',
     emptyOutDir: true,
+    rolldownOptions: {
+      output: {
+        entryFileNames: 'assets/[name].js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name][extname]',
+      },
+    },
   }
 })

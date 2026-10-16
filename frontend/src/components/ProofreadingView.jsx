@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import {
   Button,
@@ -19,7 +19,7 @@ import {
 } from '@fluentui/react-icons';
 import { diffWords } from 'diff';
 
-import { proofread, trackRequest } from '../services/api';
+import { proofread, cancelRequest, hideWindow } from '../services/api';
 import GOALS from '../config/goals.json';
 
 import styles from '../styles/ProofreadingView.module.css';
@@ -62,7 +62,6 @@ export default function ProofreadingView({ onShowSettings, onHideSettings, isVis
   const [originalText, setOriginalText] = useState('');
   const [proofreadText, setProofreadText] = useState('');
   const [showDiff, setShowDiff] = useState(true);
-  const pending = useRef(undefined);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isFollowingUp, setIsFollowingUp] = useState(false);
@@ -85,7 +84,7 @@ export default function ProofreadingView({ onShowSettings, onHideSettings, isVis
     setIsFollowingUp(false);
     setHasCurrentResult(false);
 
-    pending.current?.abort();
+    cancelRequest();
     setConversationHistory([]);
   }, []);
 
@@ -100,7 +99,7 @@ export default function ProofreadingView({ onShowSettings, onHideSettings, isVis
       { role: 'user', content: textToRun }
     ];
 
-    trackRequest(pending, proofread(messages))
+    proofread(messages)
       .then(text => {
         setProofreadText(text);
         setConversationHistory([...messages, { role: 'assistant', content: text }]);
@@ -113,6 +112,22 @@ export default function ProofreadingView({ onShowSettings, onHideSettings, isVis
         setIsLoading(false);
       });
   }, [selectedGoalId, reset]);
+
+  const handleCopy = useCallback(() => {
+    return navigator.clipboard.writeText(proofreadText);
+  }, [proofreadText]);
+
+  useEffect(() => {
+    const handleKeyDown = e => {
+      if (!isVisible || !e.ctrlKey || !e.altKey || e.code !== 'KeyC' || !proofreadText) return;
+
+      e.preventDefault();
+      handleCopy().then(hideWindow);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isVisible, proofreadText, handleCopy]);
 
   useEffect(() => {
     window.setOriginalText = text => {
@@ -131,7 +146,7 @@ export default function ProofreadingView({ onShowSettings, onHideSettings, isVis
     const updatedHistory = [...conversationHistory, { role: 'user', content: followUpText }];
     setConversationHistory(updatedHistory);
 
-    trackRequest(pending, proofread(updatedHistory))
+    proofread(updatedHistory)
       .then(text => {
         setProofreadText(text);
         setConversationHistory([...updatedHistory, { role: 'assistant', content: text }]);
@@ -143,10 +158,6 @@ export default function ProofreadingView({ onShowSettings, onHideSettings, isVis
       .finally(() => {
         setIsFollowingUp(false);
       });
-  };
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(proofreadText);
   };
 
   return (
@@ -250,6 +261,7 @@ export default function ProofreadingView({ onShowSettings, onHideSettings, isVis
           icon={<Copy24Regular />}
           onClick={handleCopy}
           disabled={!proofreadText}
+          title="Ctrl+Alt+C"
         >
           Copy Result
         </Button>
