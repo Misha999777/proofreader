@@ -4,9 +4,11 @@
 #include <Windows.h>
 #include <saucer/smartview.hpp>
 
+#include "utils/Http.hpp"
+
 class ProofReaderWindow {
 public:
-    ProofReaderWindow(saucer::application* app, bool devMode = false);
+    ProofReaderWindow(saucer::application* app);
     ~ProofReaderWindow();
 
     void show();
@@ -22,6 +24,7 @@ private:
 
     std::shared_ptr<saucer::window> m_window;
     std::optional<saucer::smartview> m_webview;
+    Http m_http;
 
     saucer::size m_logicalSize{420, 620};
 };

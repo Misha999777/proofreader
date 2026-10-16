@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "ProofReader (packaged)",
+            "type": "cppvsdbg",
+            "request": "attach",
+            "program": "${workspaceFolder}/build/layout/ProofReader.exe",
+            "preLaunchTask": "Run packaged"
+        }
+    ]
+}
