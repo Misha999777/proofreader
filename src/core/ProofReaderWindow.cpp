@@ -140,6 +140,7 @@ void ProofReaderWindow::hide() {
 
 void ProofReaderWindow::focus() {
     m_window->focus();
+    m_webview->native().controller->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);
 }
 
 void ProofReaderWindow::sendText(const std::wstring& text) {
