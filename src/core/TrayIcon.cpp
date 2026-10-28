@@ -143,10 +143,35 @@ std::wstring TrayIcon::tryGetSelectedText(IUIAutomation* automation) {
         return L"";
     }
 
+    std::wstring result = extractSelectionFromElement(focused);
+
+    if (result.empty()) {
+        VARIANT varProp;
+        varProp.vt = VT_BOOL;
+        varProp.boolVal = VARIANT_TRUE;
+
+        IUIAutomationCondition* condition = nullptr;
+        hr = automation->CreatePropertyCondition(UIA_IsTextPatternAvailablePropertyId, varProp, &condition);
+        if (SUCCEEDED(hr) && condition) {
+            IUIAutomationElement* child = nullptr;
+            hr = focused->FindFirst(TreeScope_Descendants, condition, &child);
+            if (SUCCEEDED(hr) && child) {
+                result = extractSelectionFromElement(child);
+                child->Release();
+            }
+            condition->Release();
+        }
+    }
+
+    focused->Release();
+    return result;
+}
+
+std::wstring TrayIcon::extractSelectionFromElement(IUIAutomationElement* element) {
     std::wstring result = L"";
-    
+
     IUIAutomationTextPattern* textPattern = nullptr;
-    hr = focused->GetCurrentPatternAs(UIA_TextPatternId, __uuidof(IUIAutomationTextPattern), (void**)&textPattern);
+    HRESULT hr = element->GetCurrentPatternAs(UIA_TextPatternId, __uuidof(IUIAutomationTextPattern), (void**)&textPattern);
     if (SUCCEEDED(hr) && textPattern) {
         IUIAutomationTextRangeArray* selection = nullptr;
         hr = textPattern->GetSelection(&selection);
@@ -170,7 +195,6 @@ std::wstring TrayIcon::tryGetSelectedText(IUIAutomation* automation) {
         }
         textPattern->Release();
     }
-    focused->Release();
 
     if (std::ranges::all_of(result, [](wchar_t c) { return std::iswspace(c); })) {
         return L"";

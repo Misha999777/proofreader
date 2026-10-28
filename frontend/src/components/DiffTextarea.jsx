@@ -18,11 +18,15 @@ export default function DiffTextarea({ oldText, newText, showDiff, className }) 
     const view = doc.defaultView
 
     const onBlur = () => view.getSelection().removeAllRanges()
+    const onDrop = () => node.blur()
 
     view.addEventListener('blur', onBlur)
+    window.addEventListener('drop', onDrop)
     setFrame({ doc, renderer: createDOMRenderer(doc) })
+
     return () => {
       view.removeEventListener('blur', onBlur)
+      window.removeEventListener('drop', onDrop)
       setFrame(null)
     }
   }, [])
@@ -44,7 +48,7 @@ export default function DiffTextarea({ oldText, newText, showDiff, className }) 
   return (
     <>
       <iframe
-        title="Result"
+        title="Result Box"
         ref={attachFrame}
         className={mergeClasses(className, styles.iframe)}
       />

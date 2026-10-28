@@ -21,6 +21,7 @@ private:
 
     std::wstring getSelectedTextViaUIA();
     std::wstring tryGetSelectedText(IUIAutomation* automation);
+    std::wstring extractSelectionFromElement(IUIAutomationElement* element);
 
     Callbacks m_callbacks;
     HWND m_hwnd;
