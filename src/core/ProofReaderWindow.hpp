@@ -17,7 +17,7 @@ public:
     void sendText(const std::wstring& text);
 
 private:
-    static LRESULT CALLBACK themeSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR);
+    static LRESULT CALLBACK subclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR data);
     static std::string utf16_to_utf8(const std::wstring& wstr);
     
     void setLogicalSize(saucer::size size);

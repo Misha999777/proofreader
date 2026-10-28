@@ -12,7 +12,7 @@
 }
 
 .subtext {
-  color: var(--colorNeutralForeground3);
+  color: var(--colorNeutralForeground3, #616161);
 }
 
 .formGroup {
@@ -34,12 +34,12 @@
 }
 
 .successText {
-  color: var(--colorPaletteGreenForeground1);
+  color: var(--colorPaletteGreenForeground1, #107c10);
   font-size: 12px;
 }
 
 .failureText {
-  color: var(--colorPaletteRedForeground1);
+  color: var(--colorPaletteRedForeground1, #d13438);
   font-size: 12px;
 }
 

@@ -53,19 +53,13 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        include:
-          - arch: x64
-            msvc_arch: amd64
-          - arch: arm64
-            msvc_arch: amd64_arm64
+        arch: [x64, arm64]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Setup Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: ${{ matrix.msvc_arch }}
       - name: Setup Node.js
         uses: actions/setup-node@v7
 
@@ -78,14 +72,14 @@ jobs:
         shell: pwsh
 
       - name: Configure CMake
-        run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release -Dsaucer_webview2_arch=${{ matrix.arch }}
+        run: cmake -B build -S . -A ${{ matrix.arch }} -Dsaucer_webview2_arch=${{ matrix.arch }}
       - name: Build Project
         run: cmake --build build --config Release
 
       - name: Create MSIX Package
         run: |
           $dir = "packaging"
-          Copy-Item "build\ProofReader.exe" $dir
+          Copy-Item "build\Release\ProofReader.exe" $dir
 
           & makepri createconfig /cf $dir\pri.xml /dq en-US
           & makepri new /pr $dir /cf $dir\pri.xml /of $dir\resources.pri
@@ -153,8 +147,8 @@ jobs:
 
       - name: Commit version bump
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git config --global user.name '${{ github.actor }}'
+          git config --global user.email '${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com'
 
           $newVersion = "${{ needs.version.outputs.version }}"
           $content = Get-Content packaging\AppxManifest.xml -Raw

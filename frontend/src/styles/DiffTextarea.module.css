@@ -1,0 +1,35 @@
+.iframe {
+  border: none;
+}
+
+.textArea {
+  position: fixed;
+  inset: 0;
+}
+
+.container {
+  white-space: pre-wrap;
+  overflow-y: auto;
+}
+
+.added {
+  color: #107c10;
+  background-color: #dff6dd;
+}
+
+.removed {
+  color: #d13438;
+  background-color: #fde7e9;
+  user-select: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .added {
+    color: #54b054;
+    background-color: #1e3a1e;
+  }
+  .removed {
+    color: #e88e8e;
+    background-color: #3a1e1e;
+  }
+}

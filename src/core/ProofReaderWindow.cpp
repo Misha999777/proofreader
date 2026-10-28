@@ -7,11 +7,16 @@
 #include "utils/Settings.hpp"
 #include "utils/Utils.hpp"
 
-LRESULT CALLBACK ProofReaderWindow::themeSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
+LRESULT CALLBACK ProofReaderWindow::subclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR data) {
     if (msg == WM_SETTINGCHANGE && lParam != 0) {
         const wchar_t* setting = reinterpret_cast<const wchar_t*>(lParam);
         if (wcscmp(setting, L"ImmersiveColorSet") == 0) {
             Utils::applyDarkTitleBar(hwnd);
+        }
+    } else if (msg == WM_SETFOCUS) {
+        auto* self = reinterpret_cast<ProofReaderWindow*>(data);
+        if (self && self->m_webview) {
+            self->m_webview->native().controller->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);
         }
     }
 
@@ -56,7 +61,7 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app) {
         }
 
         Utils::applyDarkTitleBar(hwnd);
-        SetWindowSubclass(hwnd, themeSubclassProc, 1, 0);
+        SetWindowSubclass(hwnd, subclassProc, 1, reinterpret_cast<DWORD_PTR>(this));
 
         if (Utils::applyMicaBackdrop(hwnd)) {
             m_window->set_background({0, 0, 0, 0});
@@ -111,7 +116,7 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app) {
 ProofReaderWindow::~ProofReaderWindow() {
     HWND hwnd = m_window ? m_window->native().hwnd : nullptr;
     if (hwnd) {
-        RemoveWindowSubclass(hwnd, themeSubclassProc, 1);
+        RemoveWindowSubclass(hwnd, subclassProc, 1);
     }
 }
 

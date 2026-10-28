@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react'
 
 import {
   Button,
@@ -8,157 +8,127 @@ import {
   Spinner,
   Label,
   Input,
-  Divider
-} from '@fluentui/react-components';
+  Divider,
+} from '@fluentui/react-components'
 import {
   Settings24Regular,
   Delete24Regular,
   Copy24Regular,
   Play24Regular,
-  Send24Regular
-} from '@fluentui/react-icons';
-import { diffWords } from 'diff';
+  Send24Regular,
+} from '@fluentui/react-icons'
 
-import { proofread, cancelRequest, hideWindow } from '../services/api';
-import GOALS from '../config/goals.json';
+import DiffTextarea from './DiffTextarea'
+import { proofread, cancelRequest, hideWindow } from '../services/api'
+import GOALS from '../config/goals.json'
 
-import styles from '../styles/ProofreadingView.module.css';
-
-function renderDiff(oldText, newText) {
-  if (!oldText || !newText) return newText;
-  
-  const differences = diffWords(oldText, newText);
-  
-  return (
-    <Textarea
-      readOnly
-      resize="none"
-      className={styles.textareaRoot}
-      textarea={{
-        as: 'div',
-        style: { whiteSpace: 'pre-wrap', overflowY: 'auto' },
-        children: differences.map((part, index) => {
-          let className = '';
-
-          if (part.added) {
-            className = styles.diffAdded;
-          } else if (part.removed) {
-            className = styles.diffRemoved;
-          }
-
-          return (
-            <span key={index} className={className || undefined}>
-              {part.value}
-            </span>
-          );
-        })
-      }}
-    />
-  );
-}
+import styles from '../styles/ProofreadingView.module.css'
 
 export default function ProofreadingView({ onShowSettings, onHideSettings, isVisible }) {
-  const [selectedGoalId, setSelectedGoalId] = useState(GOALS[0].id);
-  const [originalText, setOriginalText] = useState('');
-  const [proofreadText, setProofreadText] = useState('');
-  const [showDiff, setShowDiff] = useState(true);
+  const [selectedGoalId, setSelectedGoalId] = useState(GOALS[0].id)
+  const [originalText, setOriginalText] = useState('')
+  const [sentText, setSentText] = useState('')
+  const [proofreadText, setProofreadText] = useState('')
+  const [showDiff, setShowDiff] = useState(true)
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFollowingUp, setIsFollowingUp] = useState(false);
-  const [hasCurrentResult, setHasCurrentResult] = useState(false);
-  const [followUpText, setFollowUpText] = useState('');
-  const [conversationHistory, setConversationHistory] = useState([]);
+  const [isLoading, setIsLoading] = useState(false)
+  const [isFollowingUp, setIsFollowingUp] = useState(false)
+  const [hasCurrentResult, setHasCurrentResult] = useState(false)
+  const [followUpText, setFollowUpText] = useState('')
+  const [conversationHistory, setConversationHistory] = useState([])
 
   useEffect(() => {
     if (isVisible && window.saucer) {
-      saucer.call("resize", [400, hasCurrentResult ? 635 : 585]);
+      saucer.call('resize', [400, hasCurrentResult ? 635 : 585])
     }
-  }, [hasCurrentResult, isVisible]);
+  }, [hasCurrentResult, isVisible])
 
   const reset = useCallback(() => {
-    setOriginalText('');
-    setProofreadText('');
-    setFollowUpText('');
+    setOriginalText('')
+    setSentText('')
+    setProofreadText('')
+    setFollowUpText('')
 
-    setIsLoading(false);
-    setIsFollowingUp(false);
-    setHasCurrentResult(false);
+    setIsLoading(false)
+    setIsFollowingUp(false)
+    setHasCurrentResult(false)
 
-    cancelRequest();
-    setConversationHistory([]);
-  }, []);
+    cancelRequest()
+    setConversationHistory([])
+  }, [])
 
-  const handleRun = useCallback(textToRun => {
-    reset();
-    setOriginalText(textToRun);
-    setIsLoading(true);
+  const handleRun = useCallback((textToRun) => {
+    reset()
+    setOriginalText(textToRun)
+    setSentText(textToRun)
+    setIsLoading(true)
 
-    const selectedGoal = GOALS.find(g => g.id === selectedGoalId);
+    const selectedGoal = GOALS.find(g => g.id === selectedGoalId)
     const messages = [
       { role: 'system', content: selectedGoal.prompt },
-      { role: 'user', content: textToRun }
-    ];
+      { role: 'user', content: textToRun },
+    ]
 
     proofread(messages)
-      .then(text => {
-        setProofreadText(text);
-        setConversationHistory([...messages, { role: 'assistant', content: text }]);
-        setHasCurrentResult(true);
+      .then((text) => {
+        setProofreadText(text)
+        setConversationHistory([...messages, { role: 'assistant', content: text }])
+        setHasCurrentResult(true)
       })
-      .catch(error => {
-        setProofreadText(error?.message || 'API Error');
+      .catch((error) => {
+        setProofreadText(error?.message || 'API Error')
       })
       .finally(() => {
-        setIsLoading(false);
-      });
-  }, [selectedGoalId, reset]);
+        setIsLoading(false)
+      })
+  }, [selectedGoalId, reset])
 
   const handleCopy = useCallback(() => {
-    return navigator.clipboard.writeText(proofreadText);
-  }, [proofreadText]);
+    return navigator.clipboard.writeText(proofreadText)
+  }, [proofreadText])
 
   useEffect(() => {
-    const handleKeyDown = e => {
-      if (!isVisible || !e.ctrlKey || !e.altKey || e.code !== 'KeyC' || !proofreadText) return;
+    const handleKeyDown = (e) => {
+      if (!isVisible || !e.ctrlKey || !e.altKey || e.code !== 'KeyC' || !proofreadText) return
 
-      e.preventDefault();
-      handleCopy().then(hideWindow);
-    };
+      e.preventDefault()
+      handleCopy().then(hideWindow)
+    }
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isVisible, proofreadText, handleCopy]);
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isVisible, proofreadText, handleCopy])
 
   useEffect(() => {
-    window.setOriginalText = text => {
-      onHideSettings();
-      handleRun(text);
-    };
+    window.setOriginalText = (text) => {
+      onHideSettings()
+      handleRun(text)
+    }
 
     return () => {
-      delete window.setOriginalText;
-    };
-  }, [onHideSettings, handleRun]);
+      delete window.setOriginalText
+    }
+  }, [onHideSettings, handleRun])
 
   const handleFollowUp = async () => {
-    setIsFollowingUp(true);
+    setIsFollowingUp(true)
 
-    const updatedHistory = [...conversationHistory, { role: 'user', content: followUpText }];
-    setConversationHistory(updatedHistory);
+    const updatedHistory = [...conversationHistory, { role: 'user', content: followUpText }]
+    setConversationHistory(updatedHistory)
 
     proofread(updatedHistory)
-      .then(text => {
-        setProofreadText(text);
-        setConversationHistory([...updatedHistory, { role: 'assistant', content: text }]);
-        setFollowUpText('');
+      .then((text) => {
+        setProofreadText(text)
+        setConversationHistory([...updatedHistory, { role: 'assistant', content: text }])
+        setFollowUpText('')
       })
-      .catch(error => {
-        setProofreadText(error?.message || 'API Error');
+      .catch((error) => {
+        setProofreadText(error?.message || 'API Error')
       })
       .finally(() => {
-        setIsFollowingUp(false);
-      });
-  };
+        setIsFollowingUp(false)
+      })
+  }
 
   return (
     <div className={styles.container} style={{ display: isVisible ? 'flex' : 'none' }}>
@@ -170,8 +140,8 @@ export default function ProofreadingView({ onShowSettings, onHideSettings, isVis
       <Select
         value={selectedGoalId}
         onChange={(e, data) => {
-          setSelectedGoalId(data.value);
-          setShowDiff(data.value === 'fixGrammar');
+          setSelectedGoalId(data.value)
+          setShowDiff(data.value === 'fixGrammar')
         }}
       >
         {GOALS.map(g => (
@@ -220,16 +190,12 @@ export default function ProofreadingView({ onShowSettings, onHideSettings, isVis
             className={selectedGoalId === 'fixGrammar' ? styles.switchVisible : styles.switchHidden}
           />
         </div>
-        {selectedGoalId === 'fixGrammar' && showDiff && proofreadText ? (
-          renderDiff(originalText, proofreadText)
-        ) : (
-          <Textarea
-            value={proofreadText}
-            readOnly
-            resize="none"
-            className={styles.textareaRoot}
-          />
-        )}
+        <DiffTextarea
+          oldText={sentText}
+          newText={proofreadText}
+          showDiff={selectedGoalId === 'fixGrammar' && showDiff}
+          className={styles.textareaRoot}
+        />
       </div>
 
       {hasCurrentResult && (
@@ -238,7 +204,7 @@ export default function ProofreadingView({ onShowSettings, onHideSettings, isVis
             placeholder="Follow up..."
             value={followUpText}
             onChange={(e, data) => setFollowUpText(data.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleFollowUp()}
+            onKeyDown={e => e.key === 'Enter' && handleFollowUp()}
             disabled={isLoading || isFollowingUp}
             className={styles.followUpInput}
           />
@@ -261,11 +227,10 @@ export default function ProofreadingView({ onShowSettings, onHideSettings, isVis
           icon={<Copy24Regular />}
           onClick={handleCopy}
           disabled={!proofreadText}
-          title="Ctrl+Alt+C"
         >
           Copy Result
         </Button>
       </div>
     </div>
-  );
+  )
 }

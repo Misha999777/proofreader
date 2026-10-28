@@ -1,6 +1,0 @@
-{
-  "plugins": ["oxc", "react"],
-  "rules": {
-    "react/rules-of-hooks": "warn"
-  }
-}
