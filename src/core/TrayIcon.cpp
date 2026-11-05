@@ -1,9 +1,7 @@
 #include "TrayIcon.hpp"
 
-#include <cwctype>
 #include <algorithm>
 
-#include "utils/Utils.hpp"
 #include "resources/resource.hpp"
 
 #define WM_TRAYICON (WM_USER + 1)
@@ -11,8 +9,6 @@
 #define HOTKEY_ID 1
 
 TrayIcon::TrayIcon(Callbacks callbacks) : m_callbacks(std::move(callbacks)) {
-    Utils::applyMenuTheme();
-
     HINSTANCE hInstance = GetModuleHandleW(NULL);
     WNDCLASSW wc = {};
     wc.lpfnWndProc = TrayIcon::windowProc;
@@ -89,15 +85,6 @@ LRESULT CALLBACK TrayIcon::windowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
             }
             break;
         }
-        case WM_SETTINGCHANGE: {
-            if (lParam != 0) {
-                const wchar_t* setting = reinterpret_cast<const wchar_t*>(lParam);
-                if (wcscmp(setting, L"ImmersiveColorSet") == 0) {
-                    Utils::applyMenuTheme();
-                }
-            }
-            break;
-        }
         case WM_CLOSE: {
             if (pThis && pThis->m_callbacks.onQuit) {
                 pThis->m_callbacks.onQuit(); 
@@ -143,10 +130,35 @@ std::wstring TrayIcon::tryGetSelectedText(IUIAutomation* automation) {
         return L"";
     }
 
+    std::wstring result = extractSelectionFromElement(focused);
+
+    if (result.empty()) {
+        VARIANT varProp;
+        varProp.vt = VT_BOOL;
+        varProp.boolVal = VARIANT_TRUE;
+
+        IUIAutomationCondition* condition = nullptr;
+        hr = automation->CreatePropertyCondition(UIA_IsTextPatternAvailablePropertyId, varProp, &condition);
+        if (SUCCEEDED(hr) && condition) {
+            IUIAutomationElement* child = nullptr;
+            hr = focused->FindFirst(TreeScope_Descendants, condition, &child);
+            if (SUCCEEDED(hr) && child) {
+                result = extractSelectionFromElement(child);
+                child->Release();
+            }
+            condition->Release();
+        }
+    }
+
+    focused->Release();
+    return result;
+}
+
+std::wstring TrayIcon::extractSelectionFromElement(IUIAutomationElement* element) {
     std::wstring result = L"";
-    
+
     IUIAutomationTextPattern* textPattern = nullptr;
-    hr = focused->GetCurrentPatternAs(UIA_TextPatternId, __uuidof(IUIAutomationTextPattern), (void**)&textPattern);
+    HRESULT hr = element->GetCurrentPatternAs(UIA_TextPatternId, __uuidof(IUIAutomationTextPattern), (void**)&textPattern);
     if (SUCCEEDED(hr) && textPattern) {
         IUIAutomationTextRangeArray* selection = nullptr;
         hr = textPattern->GetSelection(&selection);
@@ -170,9 +182,8 @@ std::wstring TrayIcon::tryGetSelectedText(IUIAutomation* automation) {
         }
         textPattern->Release();
     }
-    focused->Release();
 
-    if (std::ranges::all_of(result, [](wchar_t c) { return std::iswspace(c); })) {
+    if (std::ranges::all_of(result, [](wchar_t c) { return iswspace(c); })) {
         return L"";
     }
     return result;
