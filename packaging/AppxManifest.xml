@@ -5,14 +5,17 @@
          xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
          xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
          IgnorableNamespaces="uap uap10 desktop rescap">
-    <Identity Name="MykhailoHroshevyi.ProofReader" Version="1.5.0.0" ProcessorArchitecture="x64"
+
+    <Identity Name="MykhailoHroshevyi.ProofReader" Version="1.9.2.0" ProcessorArchitecture="x64"
               Publisher="CN=B20E3D95-14D8-4DED-80C3-3F1D5B5F05E2" />
+
     <Properties>
       <DisplayName>ProofReader</DisplayName>
       <PublisherDisplayName>Mykhailo Hroshevyi</PublisherDisplayName>
       <Logo>assets\Square150x150Logo.png</Logo>
       <Description>A proofreading application</Description>
     </Properties>
+
     <Resources>
       <Resource Language="en-us" />
     </Resources>
@@ -24,6 +27,7 @@
     <Capabilities>
       <rescap:Capability Name="runFullTrust" />
     </Capabilities>
+
     <Applications>
       <Application Id="App" Executable="ProofReader.exe" EntryPoint="Windows.FullTrustApplication">
         <uap:VisualElements
@@ -34,11 +38,11 @@
                 Square44x44Logo="assets\Square44x44Logo.png">
         </uap:VisualElements>
         <Extensions>
-          <desktop:Extension Category="windows.startupTask" Executable="ProofReader.exe"
-                             EntryPoint="Windows.FullTrustApplication" uap10:Parameters="--autostart">
-            <desktop:StartupTask TaskId="ProofReader" Enabled="true" DisplayName="ProofReader"/>
+          <desktop:Extension Category="windows.startupTask" uap10:Parameters="--autostart">
+            <desktop:StartupTask TaskId="ProofReader" Enabled="true" />
           </desktop:Extension>
         </Extensions>
       </Application>
     </Applications>
+
   </Package>

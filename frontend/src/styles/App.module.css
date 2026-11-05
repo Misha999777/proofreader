@@ -1,10 +1,15 @@
 body {
-  margin: 0;
   overflow: hidden; 
+  user-select: none;
 }
 
-.root {
-  min-height: 100vh;
-  padding: 20px;
-  background-color: transparent !important;
+div.root {
+  padding: 12px;
+  background-color: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  input::-ms-reveal {
+    filter: invert(1);
+  }
 }

@@ -55,26 +55,3 @@
   display: flex;
   justify-content: flex-end;
 }
-
-.diffAdded {
-  color: #107c10;
-  background-color: #dff6dd;
-}
-
-.diffRemoved {
-  color: #d13438;
-  background-color: #fde7e9;
-  text-decoration: line-through;
-  user-select: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  .diffAdded {
-    color: #54b054;
-    background-color: #1e3a1e;
-  }
-  .diffRemoved {
-    color: #e88e8e;
-    background-color: #3a1e1e;
-  }
-}

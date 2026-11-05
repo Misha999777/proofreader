@@ -1,5 +1,8 @@
-Get-Process ProofReader -ErrorAction Ignore | Stop-Process -PassThru | Wait-Process
-Copy-Item packaging\*, build\ProofReader.exe build\layout -Recurse -Force
+Stop-Process -n ProofReader -ea Ignore
+while (Get-Process ProofReader -ea Ignore) { Start-Sleep -m 50 }
 
-Add-AppxPackage -Register build\layout\AppxManifest.xml -ForceApplicationShutdown
-Start-Process "shell:AppsFolder\$((Get-AppxPackage MykhailoHroshevyi.ProofReader).PackageFamilyName)!App"
+Copy-Item packaging\*, build\$args\ProofReader.exe build\layout -Recurse -Force
+Add-AppxPackage -Register build\layout\AppxManifest.xml
+
+Start-Process "shell:AppsFolder\$((Get-StartApps ProofReader).AppID)"
+while (!(Get-Process ProofReader -ea Ignore)) { Start-Sleep -m 50 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'
 
 import {
   Button,
@@ -7,61 +7,72 @@ import {
   Title3,
   Spinner,
   Text,
-  Divider
-} from '@fluentui/react-components';
-import { Settings24Regular, Save24Regular, NetworkCheck24Regular } from '@fluentui/react-icons';
+  Divider,
+} from '@fluentui/react-components'
+import { Settings24Regular, Save24Regular, NetworkCheck24Regular } from '@fluentui/react-icons'
 
-import { proofread, cancelRequest, loadSettings, saveSettings } from '../services/api';
-import { settings } from '../config/defaults.json';
+import { proofread, cancelRequest, loadSettings, saveSettings } from '../services/api'
 
-import styles from '../styles/SettingsView.module.css';
+import styles from '../styles/SettingsView.module.css'
+
+const API_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/'
+const MODEL = 'gemini-3.8-flash'
 
 export default function SettingsView({ onClose, isConfigured }) {
-  const [apiUrl, setApiUrl] = useState(settings.apiUrl);
-  const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState(settings.model);
+  const [apiUrl, setApiUrl] = useState(API_URL)
+  const [apiKey, setApiKey] = useState('')
+  const [model, setModel] = useState(MODEL)
 
-  const [testStatus, setTestStatus] = useState('unknown');
+  const [testStatus, setTestStatus] = useState('unknown')
 
   useEffect(() => {
     if (window.saucer) {
-      saucer.call("resize", [500, 470]);
+      saucer.call('resize', [500, 470])
     }
-    loadSettings().then(stored => {
-      setApiUrl(stored.apiUrl || settings.apiUrl);
-      setApiKey(stored.apiKey);
-      setModel(stored.model || settings.model);
-    });
-  }, []);
+  }, [])
+
+  useEffect(() => {
+    loadSettings().then((stored) => {
+      setApiUrl(stored.apiUrl || API_URL)
+      setApiKey(stored.apiKey)
+      setModel(stored.model || MODEL)
+    })
+  }, [])
+
+  const handleFieldChange = setter => (_, data) => {
+    cancelRequest()
+    setTestStatus('unknown')
+    setter(data.value)
+  }
 
   const handleSave = async () => {
-    await saveSettings({ apiUrl, apiKey, model });
-    onClose();
-  };
+    await saveSettings({ apiUrl, apiKey, model })
+    onClose()
+  }
 
   const handleCancel = () => {
-    cancelRequest();
-    onClose();
-  };
+    cancelRequest()
+    onClose()
+  }
 
   const handleTestConnection = () => {
     if (testStatus === 'progress') {
-      setTestStatus("unknown");
-      cancelRequest();
-      return;
+      cancelRequest()
+      setTestStatus('unknown')
+      return
     }
 
-    setTestStatus('progress');
-    const messages = [{ role: 'user', content: 'Hello' }];
+    setTestStatus('progress')
+    const messages = [{ role: 'user', content: 'Hello' }]
 
     proofread(messages, { apiUrl, apiKey, model })
       .then(() => {
-        setTestStatus('success');
+        setTestStatus('success')
       })
       .catch(() => {
-        setTestStatus('failure');
-      });
-  };
+        setTestStatus('failure')
+      })
+  }
 
   return (
     <div className={styles.container}>
@@ -80,7 +91,7 @@ export default function SettingsView({ onClose, isConfigured }) {
           <Label>API URL</Label>
           <Input
             value={apiUrl}
-            onChange={(e, data) => setApiUrl(data.value)}
+            onChange={handleFieldChange(setApiUrl)}
           />
         </div>
         <div className={styles.fieldGroup}>
@@ -88,14 +99,14 @@ export default function SettingsView({ onClose, isConfigured }) {
           <Input
             type="password"
             value={apiKey}
-            onChange={(e, data) => setApiKey(data.value)}
+            onChange={handleFieldChange(setApiKey)}
           />
         </div>
         <div className={styles.fieldGroup}>
           <Label>Model</Label>
           <Input
             value={model}
-            onChange={(e, data) => setModel(data.value)}
+            onChange={handleFieldChange(setModel)}
           />
         </div>
       </div>
@@ -129,5 +140,5 @@ export default function SettingsView({ onClose, isConfigured }) {
         </Button>
       </div>
     </div>
-  );
+  )
 }

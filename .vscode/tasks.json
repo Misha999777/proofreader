@@ -10,7 +10,7 @@
             "label": "Run packaged",
             "type": "process",
             "command": "powershell.exe",
-            "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "install.ps1"],
+            "args": ["-File", "install.ps1", "${command:cmake.buildType}"],
             "dependsOn": ["CMake: build"],
             "problemMatcher": []
         }

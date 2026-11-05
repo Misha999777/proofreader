@@ -1,46 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'
 
-import { FluentProvider, createLightTheme, createDarkTheme } from '@fluentui/react-components';
+import { FluentProvider } from '@fluentui/react-components'
 
-import SettingsView from './components/SettingsView';
-import ProofreadingView from './components/ProofreadingView';
-import { loadSettings } from './services/api';
-import { brand } from './config/theme.json';
+import { loadSettings } from './services/api'
+import useSystemTheme from './hooks/useSystemTheme'
 
-import styles from './styles/App.module.css';
+import SettingsView from './components/SettingsView'
+import ProofreadingView from './components/ProofreadingView'
 
-const lightTheme = createLightTheme(brand);
-const darkTheme = createDarkTheme(brand);
+import styles from './styles/App.module.css'
 
 async function checkConfigured() {
-  const { apiUrl, apiKey, model } = await loadSettings();
-  return !!(apiUrl && apiKey && model);
+  const { apiUrl, apiKey, model } = await loadSettings()
+  return !!(apiUrl && apiKey && model)
 }
 
 export default function App() {
-  const [isConfigured, setIsConfigured] = useState(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const [theme, setTheme] = useState(
-    window.matchMedia('(prefers-color-scheme: dark)').matches ? darkTheme : lightTheme
-  );
+  const [isConfigured, setIsConfigured] = useState(null)
+  const [showSettings, setShowSettings] = useState(false)
+  const theme = useSystemTheme()
 
   useEffect(() => {
-    checkConfigured().then(setIsConfigured);
-  }, []);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e) => setTheme(e.matches ? darkTheme : lightTheme);
-    mq.addEventListener('change', handleChange);
-    return () => mq.removeEventListener('change', handleChange);
-  }, []);
+    checkConfigured().then(setIsConfigured)
+  }, [])
 
   const handleSettingsClosed = () => {
-    setShowSettings(false);
-    checkConfigured().then(setIsConfigured);
-  };
+    setShowSettings(false)
+    checkConfigured().then(setIsConfigured)
+  }
 
-  const shouldShowSettings = showSettings || isConfigured === false;
+  const shouldShowSettings = showSettings || isConfigured === false
 
   return (
     <FluentProvider theme={theme} className={styles.root}>
@@ -50,11 +39,11 @@ export default function App() {
           isConfigured={isConfigured}
         />
       )}
-      <ProofreadingView 
+      <ProofreadingView
         onShowSettings={() => setShowSettings(true)}
         onHideSettings={handleSettingsClosed}
         isVisible={isConfigured !== null && !shouldShowSettings}
       />
     </FluentProvider>
-  );
+  )
 }

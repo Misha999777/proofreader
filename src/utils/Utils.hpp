@@ -6,7 +6,6 @@ class Utils {
 public:
     static void applyDarkTitleBar(HWND hwnd);
     static bool applyMicaBackdrop(HWND hwnd);
-    static void applyMenuTheme();
 private:
     static bool isWindowsDarkMode();
 };
