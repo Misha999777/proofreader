@@ -72,7 +72,7 @@ jobs:
         shell: pwsh
 
       - name: Configure CMake
-        run: cmake -B build -S . -A ${{ matrix.arch }} -Dsaucer_webview2_arch=${{ matrix.arch }}
+        run: cmake -B build -S . -A ${{ matrix.arch }}
       - name: Build Project
         run: cmake --build build --config Release
 
@@ -90,7 +90,7 @@ jobs:
           Remove-Item $dir\ProofReader.exe
         shell: pwsh
       - name: Upload MSIX
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: msix-${{ matrix.arch }}
           path: build/ProofReader_${{ matrix.arch }}.msix
@@ -107,11 +107,14 @@ jobs:
       - name: Configure Microsoft Store CLI
         uses: microsoft/microsoft-store-apppublisher@v1.4
       - name: Download MSIX packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: msix-*
           path: msix
           merge-multiple: true
+
+      - name: Create MSIX Bundle
+        run: makeappx bundle /d msix /p ProofReader.msixbundle /bv ${{ needs.version.outputs.version }} /o
 
       - name: Reconfigure store credentials
         run: |
@@ -120,19 +123,13 @@ jobs:
             --clientId ${{ secrets.CLIENT_ID }} `
             --clientSecret ${{ secrets.CLIENT_SECRET }} `
             --sellerId ${{ secrets.SELLER_ID }}
-
-      - name: Create MSIX Bundle
-        run: |
-          New-Item -ItemType Directory -Force build | Out-Null
-          & makeappx bundle /d msix /p build\ProofReader.msixbundle /bv ${{ needs.version.outputs.version }} /o
-        shell: pwsh
         
       - name: Publish App and Commit to Store
         env:
           RELEASE_NOTES: ${{ github.event.inputs.release_notes }}
           PRODUCT_ID: ${{ secrets.PRODUCT_ID }}
         run: |
-          msstore publish build/ProofReader.msixbundle -id $env:PRODUCT_ID --noCommit
+          msstore publish ProofReader.msixbundle -id $env:PRODUCT_ID --noCommit
 
           $submission = msstore submission get $env:PRODUCT_ID | ConvertFrom-Json
           if ($submission.Listings.'en-us') {
