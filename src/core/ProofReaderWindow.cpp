@@ -1,6 +1,6 @@
 #include "ProofReaderWindow.hpp"
 
-#include <dwmapi.h>
+#include <CommCtrl.h>
 #include <saucer/embedded/all.hpp>
 #include <saucer/modules/stable/webview2.hpp>
 
@@ -8,15 +8,29 @@
 #include "utils/Utils.hpp"
 
 LRESULT CALLBACK ProofReaderWindow::subclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR data) {
-    if (msg == WM_SETTINGCHANGE && lParam != 0) {
-        const wchar_t* setting = reinterpret_cast<const wchar_t*>(lParam);
-        if (wcscmp(setting, L"ImmersiveColorSet") == 0) {
-            Utils::applyDarkTitleBar(hwnd);
+    auto* self = reinterpret_cast<ProofReaderWindow*>(data);
+
+    switch (msg) {
+        case WM_CLOSE: {
+            ShowWindow(hwnd, SW_HIDE);
+            return 0;
         }
-    } else if (msg == WM_SETFOCUS) {
-        auto* self = reinterpret_cast<ProofReaderWindow*>(data);
-        if (self && self->m_webview) {
-            self->m_webview->native().controller->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);
+        case WM_DPICHANGED: {
+            LRESULT result = DefSubclassProc(hwnd, msg, wParam, lParam);
+            if (self && self->m_window) {
+                self->m_window->set_size(self->m_logicalSize);
+            }
+            return result;
+        }
+        case WM_SETFOCUS: {
+            if (self && self->m_webview) {
+                self->m_webview->native().controller->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);
+            }
+        }
+        case WM_SETTINGCHANGE: {
+            if (lParam != 0 && wcscmp(reinterpret_cast<const wchar_t*>(lParam), L"ImmersiveColorSet") == 0) {
+                Utils::applyDarkTitleBar(hwnd);
+            }
         }
     }
 
@@ -97,11 +111,6 @@ ProofReaderWindow::ProofReaderWindow(saucer::application* app) {
 
     m_webview->expose("cancel", [this]() {
         m_http.cancel();
-    });
-
-    m_window->on<saucer::window::event::close>([this]() {
-        m_window->hide();
-        return saucer::policy::block;
     });
 
 #ifdef NDEBUG
