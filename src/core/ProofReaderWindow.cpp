@@ -1,6 +1,7 @@
 #include "ProofReaderWindow.hpp"
 
 #include <CommCtrl.h>
+#include <winrt/base.h>
 #include <saucer/embedded/all.hpp>
 #include <saucer/modules/stable/webview2.hpp>
 
@@ -35,14 +36,6 @@ LRESULT CALLBACK ProofReaderWindow::subclassProc(HWND hwnd, UINT msg, WPARAM wPa
     }
 
     return DefSubclassProc(hwnd, msg, wParam, lParam);
-}
-
-std::string ProofReaderWindow::utf16_to_utf8(const std::wstring& wstr) {
-    if (wstr.empty()) return {};
-    int size = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), (int)wstr.size(), nullptr, 0, nullptr, nullptr);
-    std::string result(size, 0);
-    WideCharToMultiByte(CP_UTF8, 0, wstr.data(), (int)wstr.size(), result.data(), size, nullptr, nullptr);
-    return result;
 }
 
 ProofReaderWindow::ProofReaderWindow(saucer::application* app) {
@@ -158,5 +151,5 @@ void ProofReaderWindow::focus() {
 }
 
 void ProofReaderWindow::sendText(const std::wstring& text) {
-    m_webview->execute("if(window.setOriginalText) window.setOriginalText({});", utf16_to_utf8(text));
+    m_webview->execute("if(window.setOriginalText) window.setOriginalText({});", winrt::to_string(text));
 }
